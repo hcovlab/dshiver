@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from __future__ import print_function
 
 ## Author: Chris Wymant, chris.wymant@bdi.ox.ac.uk
@@ -24,7 +24,7 @@ import os
 import sys
 import re
 from Bio import AlignIO
-from Bio import Seq  
+from Bio import Seq
 import collections
 
 # Define a function to check files exist, as a type for the argparse.
@@ -37,7 +37,7 @@ def File(MyFile):
 ExplanatoryMessage = ExplanatoryMessage.replace('\n', ' ').replace('  ', ' ')
 parser = argparse.ArgumentParser(description=ExplanatoryMessage)
 parser.add_argument('alignment', type=File)
-parser.add_argument('-R', '--reorder', action='store_true', help='''Does some 
+parser.add_argument('-R', '--reorder', action='store_true', help='''Does some
 hard-coded reordering and renaming of sequences, specific to the sequence names
 found in the shiver publication. (Unlikely to be useful to anyone but the code's
 author.)''')
@@ -201,8 +201,8 @@ if args.RP or args.RHP:
     NewOutList.append((NewName, ContigColourCodes))
 
   OutList = NewOutList
-  
-  
+
+
 
 # Print output
 for seq.id, ColourCodes in OutList:

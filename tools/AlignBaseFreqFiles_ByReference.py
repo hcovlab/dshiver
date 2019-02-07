@@ -1,4 +1,5 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+
 from __future__ import print_function
 
 ## Author: Chris Wymant, chris.wymant@bdi.ox.ac.uk
@@ -144,7 +145,7 @@ def GetFreqs(BaseFreqsFile, RefSeq):
         continue
       fields = line.split(',')
       RefPos = fields[0]
-      if RefPos == 'NA':  
+      if RefPos == 'NA':
         continue
       RefPos = int(RefPos)
       if RefPos != LastRefPos + 1:
@@ -174,7 +175,7 @@ def GetFreqs(BaseFreqsFile, RefSeq):
     elif base == '-':
       # If the ref hasn't started yet, all base counts equal zero; if this is a
       # gap inside the ref, reproduce the base counts from the last position.
-      # This is just to facilitate the coverage calculation, for which we take 
+      # This is just to facilitate the coverage calculation, for which we take
       # the coverage (sum of counts) here to be equal to its last value before
       # the deletion, but we won't report the breakdown into different bases.
       freqs = LastPosFreqs
@@ -217,12 +218,11 @@ NumPosWithHigherCovIn1 = 0
 NumPosWithHigherCovIn2 = 0
 
 # Record each row of the csv file
-for PosMin1, (ref1freqs, ref2freqs) in enumerate(itertools.izip(ref1freqs,
-ref2freqs)):
+for PosMin1, (ref1freqs, ref2freqs) in enumerate(zip(ref1freqs,ref2freqs)):
   PosInRef1 = ref1PosConversions[PosMin1]
   PosInRef2 = ref2PosConversions[PosMin1]
   outstring += '\n' + str(PosMin1+1) + ',' + str(PosInRef1) + ',' + \
-  str(PosInRef2) 
+  str(PosInRef2)
 
   if args.coverage_only:
     ref1cov = sum(ref1freqs)
@@ -242,7 +242,7 @@ ref2freqs)):
       SimScoreCont = 'NA'
     else:
       ref1freqs = ref1freqs[:5]
-      ref2freqs = ref2freqs[:5]  
+      ref2freqs = ref2freqs[:5]
       ref1cov = sum(ref1freqs)
       ref2cov = sum(ref2freqs)
       if ref1cov == 0 or ref2cov == 0:
@@ -286,7 +286,7 @@ ref2freqs)):
       outstring += ',' + str(SimScoreCont)
 
 # Print output
-if args.compare_snips_with_coverage:  
+if args.compare_snips_with_coverage:
   print(NumPosWithHigherCovIn1, NumPosWithHigherCovIn2)
 else:
   print(outstring)

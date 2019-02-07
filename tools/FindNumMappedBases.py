@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from __future__ import print_function
 
 ## Author: Chris Wymant, chris.wymant@bdi.ox.ac.uk
@@ -58,7 +58,7 @@ BamFile = pysam.AlignmentFile(args.BamFile, "rb")
 # Find the reference in the bam file; there should only be one.
 AllReferences = BamFile.references
 if len(AllReferences) != 1:
-  print('Expected exactly one reference in', BamFileName+'; found',\
+  print('Expected exactly one reference in', args.BamFile+'; found',\
   str(len(AllReferences))+'.\nQuitting.', file=sys.stderr)
   exit(1)
 RefName = AllReferences[0]
@@ -71,7 +71,7 @@ if BinByIdentity:
     print('The --identity-binning option requires the --ref-file option.', \
     'Quitting.', file=sys.stderr)
     exit(1)
-    
+
   SeqList = list(SeqIO.parse(open(args.ref_file), 'fasta'))
   if len(SeqList) != 1:
     print('There are', len(SeqList), 'sequences in', args.ref_file +\
@@ -118,7 +118,7 @@ for read in BamFile.fetch(RefName):
   NumMappedBasesByReadIdentity[Bin(identity)] += \
   read.query_alignment_length
 
-  
+
 if not BinByIdentity:
   print(NumMappedBases)
   exit(0)

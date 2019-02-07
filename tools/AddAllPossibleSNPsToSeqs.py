@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from __future__ import print_function
 
 ## Author: Chris Wymant, chris.wymant@bdi.ox.ac.uk
@@ -81,6 +81,6 @@ for seq in InSeqObjects:
       OutSeqs.append(SeqIO.SeqRecord(Seq.Seq(MutatedSeq), id=ID,
       description=''))
       UniqueSeqs.add(MutatedSeq)
-      
+
 SeqIO.write(OutSeqs, args.OutputFasta, "fasta")
 #SeqIO.write(OutSeqs, sys.stdout, "fasta")

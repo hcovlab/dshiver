@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from __future__ import print_function
 
 ## Author: Chris Wymant, chris.wymant@bdi.ox.ac.uk
@@ -17,8 +17,8 @@ import os
 import sys
 import itertools
 from Bio import AlignIO
-from Bio import Seq  
-from Bio import SeqIO  
+from Bio import Seq
+from Bio import SeqIO
 from collections import Counter, OrderedDict
 import numpy as np
 
@@ -87,7 +87,7 @@ if args.subset_size:
   alignment = [alignment[i] for i in SeqsToKeep]
   NumSeqs = args.subset_size
 
-NumComparisons = (NumSeqs * (NumSeqs - 1)) / 2  
+NumComparisons = (NumSeqs * (NumSeqs - 1)) / 2
 
 # Our representation of each seq will be an array of bools: True for a gap char,
 # False otherwise
@@ -144,7 +144,7 @@ def ProcessRangeOfSeqs(SeqNumbers):
       seq1sub = seq1[start : end + 1]
       seq2sub = seq2[start : end + 1]
 
-      for pos, (gap1, gap2) in enumerate(itertools.izip(seq1sub, seq2sub)):
+      for pos, (gap1, gap2) in enumerate(zip(seq1sub, seq2sub)):
 
         # The first position in the pairwise alignment.
         if not pos:
@@ -201,7 +201,7 @@ def ProcessRangeOfSeqs(SeqNumbers):
         LastGap2 = gap2
 
   return DelSizeCounts, DelPositionCounts
-  
+
 # Do all the pairwise comparisons!
 DelSizeCounts, DelPositionCounts = ProcessRangeOfSeqs(range(NumSeqs))
 
@@ -230,12 +230,12 @@ else:
   if args.offset:
     offset = 1 + args.offset
   else:
-    offset = 1 
+    offset = 1
   for DelPosition, DelPositionCount in DelPositionCounts.items():
     DelPositionCountsNew[DelPosition + offset] = DelPositionCount
   DelPositionCounts = DelPositionCountsNew
 
-# Write output  
+# Write output
 with open(args.OutputFileBasename + '_IndelSizes.csv', 'w') as f:
   f.write('Indel size (bp),Mean number of indels of that size per compared pair of sequences\n')
   for DelSize, DelSizeCount in DelSizeCounts.items():

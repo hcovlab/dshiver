@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 from __future__ import print_function
 #
 ## Author: Chris Wymant, chris.wymant@bdi.ox.ac.uk
@@ -83,7 +83,7 @@ BaseFreqFile = args.BaseFreqFile
 MinCoverage = args.MinCoverage
 MinCovForUpper = args.MinCovForUpper
 
-# Check that MinCoverage and MinCovForUpper are positive integers, the 
+# Check that MinCoverage and MinCovForUpper are positive integers, the
 # latter not smaller than the former.
 if MinCoverage < 1:
   print('The specified MinumumCoverageToCallBase of', MinCoverage, \
@@ -120,7 +120,7 @@ def CallAmbigBaseIfNeeded(bases, coverage):
     # otherwise, find the ambiguity code for this set of bases.
     if GapChar in bases:
       BaseHere = 'N'
-    else:  
+    else:
       try:
         BaseHere = ReverseIUPACdict2[bases]
       except KeyError:
@@ -149,7 +149,7 @@ def CallEnoughBases(BaseCounts, MinCoverage, coverage):
   # count is the same as the current one - then we should take that one too.
   # If we reach the end of the list, there's no 'next' to check: we need all the
   # bases.
-  CountSoFar = 0  
+  CountSoFar = 0
   for i, count in enumerate(SortedBaseCounts):
     if i == NumExpectedBases - 1:
       NumBasesNeeded = i+1
@@ -201,9 +201,9 @@ with open(BaseFreqFile, 'r') as f:
         '. One character only was expected. Quitting.', file=sys.stderr)
         exit(1)
 
-    # Convert to ints    
+    # Convert to ints
     try:
-      counts = map(int, counts)
+      counts = list(map(int, counts))
     except ValueError:
       print('Could not understand the base counts as ints on line', \
       str(LineNumMin1+1), ',\n', line, 'in', BaseFreqFile + \
@@ -233,7 +233,7 @@ with open(BaseFreqFile, 'r') as f:
     if count == MaxCount]
 
     # If we're calling the most common base regardless of count:
-    if CallMostCommon: 
+    if CallMostCommon:
       BaseToCall = CallAmbigBaseIfNeeded(BasesWithMaxCount, coverage)
 
     else:
@@ -246,7 +246,7 @@ with open(BaseFreqFile, 'r') as f:
         BaseToCall = CallEnoughBases(counts, CountToCallBase, coverage)
 
     consensus += BaseToCall
-      
+
 # Replaces gaps that border "no coverage" by "no coverage".
 if not args.keep_gaps_by_missing:
   consensus = PropagateNoCoverageChar(consensus)
@@ -256,7 +256,7 @@ if not args.keep_gaps_by_missing:
 if not args.ref_seq_missing:
   NewConsensus = ''
   NewRefSeq = ''
-  for ConsensusBase, RefBase in itertools.izip(consensus, RefSeq):
+  for ConsensusBase, RefBase in zip(consensus, RefSeq):
     if RefBase == GapChar and (ConsensusBase == '?' or ConsensusBase == \
     GapChar):
       continue

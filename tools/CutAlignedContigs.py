@@ -1,8 +1,8 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 from __future__ import print_function
 
 ## Author: Tanya Golubchik and Chris Wymant chris.wymant@bdi.ox.ac.uk
-## Acknowledgement: written with funding from the ERC Advanced Grant PBDR-339251 
+## Acknowledgement: written with funding from the ERC Advanced Grant PBDR-339251
 ##
 ## Overview
 ExplanatoryMessage = '''This script takes as input a sequence alignment and the
@@ -39,7 +39,7 @@ parser.add_argument('NameOfSeqToCorrect', nargs='+')
 parser.add_argument( '-G', '--split-gap-size', default=100, type=int, help='''
 The gap size at which a contig will be split into two. (Default: 100.)''')
 parser.add_argument( '-M', '--min-contig-size', default=80, type=int, help='''
-The minimum length of a contig (or a piece of a contig, after contig splitting) 
+The minimum length of a contig (or a piece of a contig, after contig splitting)
 for it to be kept in the alignment. (Default: 80.)''')
 parser.add_argument('-O', '--trim-overhangs', action="store_true", help='''With
 this option we trim (by replacing with gaps) bases in one of the sequences to

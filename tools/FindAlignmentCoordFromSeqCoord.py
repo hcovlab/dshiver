@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from __future__ import print_function
 
 ## Author: Chris Wymant, chris.wymant@bdi.ox.ac.uk
@@ -42,7 +42,7 @@ for seq in alignment:
     ChosenSeq = str(seq.seq)
     break
 if ChosenSeq == None:
-  print('Did not find', args.SeqName, 'in', args.alignment + '. Quitting.', 
+  print('Did not find', args.SeqName, 'in', args.alignment + '. Quitting.',
   file=sys.stderr)
   exit(1)
 

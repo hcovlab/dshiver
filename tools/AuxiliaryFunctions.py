@@ -81,7 +81,7 @@ def InterpretIUPAC(MyDict):
 
 # Two bases match if: they are equal, or if one is an ambiguity code coding for
 # the other, or if they are both ambiguity codes coding for at least one shared
-# base. 
+# base.
 def BaseMatch(base1,base2):
   '''Checks if base1 = base2, allowing for one or both to be ambiguous.'''
   if base1 == base2:
@@ -109,7 +109,7 @@ def CallAmbigBaseIfNeeded(bases, coverage, MinCovForUpper, BaseFreqFile):
     # otherwise, find the ambiguity code for this set of bases.
     if "-" in bases:
       BaseHere = 'N'
-    else:  
+    else:
       try:
         BaseHere = ReverseIUPACdict2[bases]
       except KeyError:
@@ -132,7 +132,7 @@ def PropagateNoCoverageChar(seq, LeftToRightDone=False):
   ACTG---?---ACTG
   becomes
   ACTG???????ACTG'''
-  
+
   if LeftToRightDone:
     seq = seq[::-1]
   BaseToLeftIsNoCoverage = False
@@ -213,7 +213,9 @@ def ReadSequencesFromFile(DataFile,IsAlignment=True):
 
 
   # Check all sequences have the same length, if they're supposed to
-  FirstSequenceName, FirstSequence = AllSequences.items()[0]
+  #FirstSequenceName, FirstSequence = AllSequences.items()[0]
+  FirstSequenceName = list(AllSequences)[0]
+  FirstSequence = AllSequences[FirstSequenceName]
   SequenceLength = len(FirstSequence)
   if IsAlignment:
     for SequenceName, Sequence in AllSequences.items():
@@ -286,7 +288,7 @@ def ReadSequencesFromFile_ordered(DataFile,IsAlignment=True):
     OtherSeqs = [item[1] for item in AllSequences[1:]]
     if not all(len(OtherSeq) == FirstSeqLength for OtherSeq in OtherSeqs):
       for [SeqName,seq] in AllSequences[1:]:
-        if len(item[1]) != FirstSeqLength:
+        if len(seq) != FirstSeqLength:
           print(SeqName, 'has length', len(seq), 'whereas', \
           FirstSeqName, 'has length', FirstSeqLength, \
       'Aligned sequences were expected.\nQuitting.', file=sys.stderr)
@@ -367,7 +369,7 @@ def ReadPatientFile(OneLinePerPatientOnly, filename):
 
         # If each patient might have multiple lines of data in this file,
         # create a list for each field and append to it. If this line
-        # corresponds to a patient we haven't seen yet, the list needs 
+        # corresponds to a patient we haven't seen yet, the list needs
         # initialising.
         if not OneLinePerPatientOnly:
           if not ID in AllPatientsDict:

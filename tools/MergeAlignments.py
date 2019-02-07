@@ -1,8 +1,8 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 from __future__ import print_function
 
 ## Author: Chris Wymant, chris.wymant@bdi.ox.ac.uk
-## Acknowledgement: I wrote this while funded by ERC Advanced Grant PBDR-339251 
+## Acknowledgement: I wrote this while funded by ERC Advanced Grant PBDR-339251
 ## TODO:
 ## Overview: this script excises insertions and introduces gaps into  takes as its arguments one 'main' alignment and one
 ## 'paried' alignment (containing two sequences), both in fasta format. The
@@ -12,7 +12,7 @@ from __future__ import print_function
 ## reference are removed, so that the reference there contains no gaps.
 ## 2) In the main alignment, unique insertions of the reference relative to all
 ## other sequences are removed; such positions are also removed from both
-## sequences in the paired alignment       Then this gapless  The two versions of the sequence 
+## sequences in the paired alignment       Then this gapless  The two versions of the sequence
 ## which is present in both are compared; gaps which are present in the main
 ## alignment but not the paired alignment are inserted into the latter, so
 ## that the sequence which is not in the main alignment can be added to it.
@@ -68,7 +68,7 @@ if (args.excise and args.dont_excise) or \
   'specified.', file=sys.stderr)
   exit(1)
 
-# Rename arguments for brevity / clarity. 
+# Rename arguments for brevity / clarity.
 MainAlnFile = args.MainAlignmentFile
 PairedAlnFile = args.PairedAlignmentFile
 ExciseUniqueInsertionsOfRefInMainAlignment = args.excise
@@ -128,7 +128,7 @@ if GapChar in RefSeqFromPair:
     'Unexpected.\nQuitting.', file=sys.stderr)
     exit(1)
   else:
-    # Loop through every position in RefSeqFromPair. If it's a gap, we ignore 
+    # Loop through every position in RefSeqFromPair. If it's a gap, we ignore
     # that position in SeqToAdd.
     SeqToAdd_NoInsertions = ''
     RefSeqFromPair_NoGaps = ''
@@ -151,7 +151,7 @@ else:
 # ignoring such positions means the 'from' coords are with respect to the
 # refseq (and the 'to' coords are with respect to the final alignment, i.e. the
 # output.)
- 
+
 # Check that the two versions of the ref seq differ only with regards to gaps
 # and upper/lower case:
 if RefSeqFromMain.replace(GapChar,'').upper() != RefSeqFromPair.upper():
@@ -161,12 +161,12 @@ if RefSeqFromMain.replace(GapChar,'').upper() != RefSeqFromPair.upper():
   #print(RefSeqFromMain.replace(GapChar,''), RefSeqFromPair)
   exit(1)
 
-# Loop through every base in RefSeqFromMain. a) If it's a GapChar, we need to 
+# Loop through every base in RefSeqFromMain. a) If it's a GapChar, we need to
 # add a gap at that position in SeqToAdd, unless every reference in the main
 # alignment has a gap there in which case we just skip. b) If it's not a
-# GapChar, and is a  unique insertion (i.e. at that position in the main 
-# alignment only that  sequence has a base), we want to excise that base from 
-# SeqToAdd. c) If it's neither a GapChar nor a unique insertion, we use that 
+# GapChar, and is a  unique insertion (i.e. at that position in the main
+# alignment only that  sequence has a base), we want to excise that base from
+# SeqToAdd. c) If it's neither a GapChar nor a unique insertion, we use that
 # base from SeqToAdd.
 SeqToAdd_WithGaps = ''
 ReferenceWithoutInsertions = ''
@@ -210,7 +210,7 @@ for MainPosition,BaseInMainRef in enumerate(RefSeqFromMain):
       TranslationRecord += '\n' +str(PositionInFinalAln) +',' +\
       str(RefPosition+1) +',' +SeqBase
     else:
-      TranslationRecord += '\n-,' +str(RefPosition+1)+','+SeqBase 
+      TranslationRecord += '\n-,' +str(RefPosition+1)+','+SeqBase
     PositionInSeqToAdd += 1
 
 if args.log_file != None:
@@ -222,7 +222,7 @@ FinalSeqToAdd = PropagateNoCoverageChar(SeqToAdd_WithGaps)
 # Thanks Stackoverflow:
 def insert_newlines(string, every=FastaSeqLineLength):
     lines = []
-    for i in xrange(0, len(string), every):
+    for i in range(0, len(string), every):
         lines.append(string[i:i+every])
     return '\n'.join(lines)
 

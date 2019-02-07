@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 from __future__ import print_function
 
 ## Author: Chris Wymant, chris.wymant@bdi.ox.ac.uk
@@ -67,7 +67,7 @@ else:
   [(RefNameInFasta, RefSeq)], ReferenceLength = \
   ReadReferenceFromFile(ReferenceFileOrDir)
   RefSeq = RefSeq.upper()
-  
+
 ExpectedBases = ['A', 'C', 'G', 'T', '-', 'N']
 MissingCoverageBaseCounts = [0] * len(ExpectedBases)
 MissingCoverageBaseCountsAsStr = ','.join(map(str,MissingCoverageBaseCounts))
@@ -219,7 +219,7 @@ with open(PileupFile, 'r') as f:
     NumReadsWithoutInsertion = NumReads - NumReadsWithInsertion
     MostReadsHaveInsertion = NumReadsWithInsertion > NumReadsWithoutInsertion
 
-    # Iterate through PileupString, modifying the 
+    # Iterate through PileupString, modifying the
     # base counts by interpreting the pileup format appropriately.
     # The character following a ^ should be ignored. $ should be ignored.
     # After a '+' or '-' then a number, that number of characters should be
@@ -292,7 +292,7 @@ with open(PileupFile, 'r') as f:
     # If the most common insertion size here is greater than zero, add in that
     # many columns between this reference position and the next. For these
     # columns, we consider only those reads with an insertion of exactly that
-    # size, ignoring all other reads (and not counting them in the 'number of 
+    # size, ignoring all other reads (and not counting them in the 'number of
     # reads mapping here' field).
     if MostCommonInsertionSize > 0:
       InsertionsConsidered = insertions[MostCommonInsertionSize]
@@ -319,13 +319,13 @@ for PositionWithPileup in InfoFromAllPositions:
   ReferencePosition = PositionWithPileup[0]
 
   if ReferencePosition == 'NA':
-    # This is an insertion with respect to the reference  
+    # This is an insertion with respect to the reference
     print(','.join(map(str,PositionWithPileup)))
     continue
 
   if ReferencePosition != RightMostReferencePositionSoFar+1:
     # We have skipped some positions with respect to the reference, due to
-    # having no pileup information there. Let's fill in those blanks.  
+    # having no pileup information there. Let's fill in those blanks.
     for SkippedPosition in range(RightMostReferencePositionSoFar+1,\
     ReferencePosition):
       print(SkippedPosition, RefSeq[SkippedPosition-1], \

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from __future__ import print_function
 
 ## Author: Chris Wymant, chris.wymant@bdi.ox.ac.uk and Francois Blanquart who
@@ -200,10 +200,10 @@ for contig, hits in HitDict.items():
   qseqid, sseqid, evalue, pident, qlen, qstart, qend, sstart, send = FirstHit
 
   # If there's a bit of the contig that doesn't blast and the user wants to
-  # discard such bits, correction is needed. However if we're just checking 
-  # whether correction is needed (i.e. not actually correcting the contigs), 
-  # don't quit just yet: the --min-hit-frac option is designed to allow some 
-  # flexibility so that we don't report that correction is necessary because 
+  # discard such bits, correction is needed. However if we're just checking
+  # whether correction is needed (i.e. not actually correcting the contigs),
+  # don't quit just yet: the --min-hit-frac option is designed to allow some
+  # flexibility so that we don't report that correction is necessary because
   # 0.001% of the contig fails blasting.
   HitLength = qend - qstart + 1
   if HitLength < qlen and not args.keep_non_hits and MakeCorrections:
@@ -310,7 +310,7 @@ for ContigName, hits in HitDict.items():
 
         # For this block, we want to discard sequence that's not inside a hit,
         # and duplicate sequence that's overlapped by two hits.
-        else:  
+        else:
           CutStart = ThisStart
           CutEnd = ThisEnd
 
@@ -354,7 +354,7 @@ for ContigName, hits in HitDict.items():
       ThisCutSeq = copy.deepcopy(seq)
       ThisCutSeq.seq = ThisCutSeq.seq[CutStart-1 : CutEnd]
       ThisCutSeq.description = ''
-      
+
       # Do we need to reverse complement?
       sstart, send = hit[7:9]
       if sstart > send:

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from __future__ import print_function
 
 ## Author: Chris Wymant, chris.wymant@bdi.ox.ac.uk
@@ -89,14 +89,14 @@ if HavePairwiseAln:
     file=sys.stderr)
     raise
   if len(TwoSeqs) != 2:
-    print('Found', len(TwoSeqs), 'sequences in', args.pairwise_aln + 
+    print('Found', len(TwoSeqs), 'sequences in', args.pairwise_aln +
     "; there should be exactly 2. Quitting.", file=sys.stderr)
     exit(1)
 
   # Check one of the seqs has the right ref name; see which one.
   if TwoSeqs[0].id == RefName:
     if TwoSeqs[1].id == RefName:
-      print('Both sequences in', args.pairwise_aln, 'are named', RefName, 
+      print('Both sequences in', args.pairwise_aln, 'are named', RefName,
       "(the reference name mentioned in the base freq file); only one should"
       "be. Quitting.", file=sys.stderr)
       exit(1)
@@ -104,7 +104,7 @@ if HavePairwiseAln:
     OtherSeq = TwoSeqs[1]
   else:
     if TwoSeqs[1].id != RefName:
-      print('Neither sequence in', args.pairwise_aln, 'is named', RefName, 
+      print('Neither sequence in', args.pairwise_aln, 'is named', RefName,
       "(the reference name mentioned in the base freq file); exactly one "
       "should be. Quitting.", file=sys.stderr)
       exit(1)
@@ -187,7 +187,7 @@ for LineNumberMin2, line in enumerate(BaseFreqData[1:]):
 
   # Skip positions where we have base freq data inside an insertion with respect
   # to the ref.
-  if RefPos == 'NA':  
+  if RefPos == 'NA':
     continue
 
   # Check the ref position increments by 1.
@@ -206,7 +206,7 @@ for LineNumberMin2, line in enumerate(BaseFreqData[1:]):
     'in', args.pairwise_aln + '. Quitting.', file=sys.stderr)
     quit(1)
 
-  try:  
+  try:
     NewPos = RefPosToNewPosDict[RefPos]
   except KeyError:
     NewPos = '-'

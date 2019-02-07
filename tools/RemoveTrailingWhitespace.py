@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 ## Author: Chris Wymant, chris.wymant@bdi.ox.ac.uk
 ## Acknowledgement: I wrote this while funded by ERC Advanced Grant PBDR-339251
@@ -26,4 +26,4 @@ args = parser.parse_args()
 
 with open(args.InputFile, 'r') as f:
   for line in f:
-    print line.rstrip()
+    print(line.rstrip())

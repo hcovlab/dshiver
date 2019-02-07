@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from __future__ import print_function
 
 ## Author: Chris Wymant, chris.wymant@bdi.ox.ac.uk
@@ -28,8 +28,8 @@ import sys
 import pandas
 import itertools
 from Bio import AlignIO
-from Bio import Seq  
-from Bio import SeqIO  
+from Bio import Seq
+from Bio import SeqIO
 import collections
 from re import sub
 import numpy as np
@@ -123,7 +123,7 @@ if num_input_types != 1:
   '--base_freqs options should be specified. Quitting.', file=sys.stderr)
   exit(1)
 
-# If we have individual consensus files or base freqs, the output arg should be 
+# If we have individual consensus files or base freqs, the output arg should be
 # a directory - make it if it doesn't exist already.
 if have_individual_consensus or have_base_freqs:
   if not os.path.isdir(args.output):
@@ -180,7 +180,7 @@ if have_sanger_dict:
       all_beehive_ids.add(beehive_id)
 
 
-# Read and check the amplicon regions. 
+# Read and check the amplicon regions.
 regions_dict = collections.OrderedDict()
 regions_dict_not_empty = False
 with open(args.amplicon_regions_file, 'r') as f:
@@ -193,7 +193,7 @@ with open(args.amplicon_regions_file, 'r') as f:
     region, start, end = fields
     start, end = int(start), int(end)
     if start > end:
-      print('Start greater than end for region', region, 'in', 
+      print('Start greater than end for region', region, 'in',
       args.amplicon_regions_file + '. Quitting.', file=sys.stderr)
       exit(1)
     if region in regions_dict:
@@ -245,7 +245,7 @@ if args.split_amplicons:
       print(output_file, "exists already; quitting to prevent overwriting.",
       file=sys.stderr)
       exit(1)
-      
+
 
 # Read the seq-based blacklist.
 seq_blacklist_dict = {}
@@ -345,7 +345,7 @@ def PropagateNoCoverageChar(seq, LeftToRightDone=False):
   ACTG---N---ACTG
   becomes
   ACTGNNNNNNNACTG'''
-  
+
   if LeftToRightDone:
     seq = seq[::-1]
   BaseToLeftIsNoCoverage = False
@@ -421,7 +421,7 @@ unaln_seqs_by_region = {region : {} for region in regions}
 for seq in collection_of_seqs:
 
   # If individual consensus files were given, seq is one such file. Read the
-  # file and reassign seq to be the first sequence in it. 
+  # file and reassign seq to be the first sequence in it.
   if have_individual_consensus:
     individual_consensus_file = seq
     try:
@@ -452,7 +452,7 @@ for seq in collection_of_seqs:
       TranslateSeqCoordsToAlnCoords(this_reference, region_boundaries)
       regions_dict_this_aln[region] = (start_in_this_aln, end_in_this_aln)
       this_reference_by_region[region] = \
-      this_reference[start_in_this_aln - 1 : end_in_this_aln].replace("-", "") 
+      this_reference[start_in_this_aln - 1 : end_in_this_aln].replace("-", "")
     if first_gapless_reference == None:
       first_gapless_reference = this_reference_gapless
       first_reference_by_region = this_reference_by_region
@@ -478,7 +478,7 @@ for seq in collection_of_seqs:
 
   elif have_base_freqs:
     # Read the file, iterate through the first column - the position with
-    # respect to the reference - and find the row numbers for the start and end 
+    # respect to the reference - and find the row numbers for the start and end
     # of each region.
     try:
       base_freq_df = pandas.read_csv(seq)
@@ -561,7 +561,7 @@ for seq in collection_of_seqs:
 
     # Add our own blacklisting of regions, based on the fraction that's not "N",
     # for regions that have not already been blacklisted.
-    for region_num in xrange(num_regions):
+    for region_num in range(num_regions):
       seq_in_blacklist = seq_id in seq_blacklist_dict
       if seq_in_blacklist and not seq_blacklist_dict[seq_id][region_num + 1]:
         continue
@@ -577,7 +577,7 @@ for seq in collection_of_seqs:
         extra_blacklisted_seq_ids.add(seq_id)
       #completeness_percents[region].append(completeness_percent)
 
-  # Delete every seq from a blacklisted patient      
+  # Delete every seq from a blacklisted patient
   beehive_id = get_beehive_id(seq_id)
   if beehive_id in blacklisted_patients:
     if args.verbose:
@@ -600,7 +600,7 @@ for seq in collection_of_seqs:
         ": discarding whole sequence as it was blacklisted.", sep='')
       continue
 
-    for region_num in xrange(num_regions):
+    for region_num in range(num_regions):
 
       # Mask blacklisted regions.
       keep_region = seq_blacklist_values[region_num + 1]
@@ -625,7 +625,7 @@ for seq in collection_of_seqs:
           "N" * (end - start + 1) + seq_as_str[end:]
 
   # If we have individual consensuses, either record each region of this
-  # consensus into a separate list for later aggregation between patients if 
+  # consensus into a separate list for later aggregation between patients if
   # desired, otherwise just write the output file.
   if have_individual_consensus:
     seq_as_str = PropagateNoCoverageChar(seq_as_str)
@@ -693,7 +693,7 @@ if len(blacklisted_seqs_not_found) != 0:
   print('Warning: the following blacklisted seqs, specified in',
   args.seq_based_blacklist + ', were not encountered:',
   ' '.join(blacklisted_seqs_not_found), file=sys.stderr)
-  
+
 # If desired, write the new blacklist as a result of our missingness analysis.
 if args.print_new_seq_blacklist != None:
   with open(args.print_new_seq_blacklist, 'w') as f:
@@ -747,12 +747,12 @@ seq_ids_for_multiply_seqd_patients.items():
   seqs_by_length = sorted(seqs, key=lambda seq : alignment_length - \
   seq.count("N") - seq.count("-"), reverse=True)
   best_seq = ""
-  for pos in xrange(alignment_length):
+  for pos in range(alignment_length):
 
     # Try each seq in order from best to worst until one of them has something
     # other than an N:
     best_base = "N"
-    for i in xrange(num_seqs):
+    for i in range(num_seqs):
       base = seqs_by_length[i][pos]
       if base != "N":
         best_base = base
@@ -787,7 +787,7 @@ if args.split_amplicons:
       if not all(base == "N" for base in seq_here):
         OutSeqs.append(SeqIO.SeqRecord(Seq.Seq(seq_here), id=seq_id,
         description=''))
-    SeqIO.write(OutSeqs, per_region_output_file_dict[region], 'fasta')    
+    SeqIO.write(OutSeqs, per_region_output_file_dict[region], 'fasta')
 
 OutSeqs = []
 for seq_id, seq in sorted_seqs:
@@ -798,5 +798,5 @@ for seq_id, seq in sorted_seqs:
   else:
     OutSeqs.append(SeqIO.SeqRecord(Seq.Seq(seq), id=seq_id, description=''))
 SeqIO.write(OutSeqs, args.output, 'fasta')
-        
+
 

@@ -1,8 +1,8 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 from __future__ import print_function
 
 ## Author: Chris Wymant, chris.wymant@bdi.ox.ac.uk
-## Acknowledgement: I wrote this while funded by ERC Advanced Grant PBDR-339251 
+## Acknowledgement: I wrote this while funded by ERC Advanced Grant PBDR-339251
 ##
 ## Overview
 ExplanatoryMessage = '''We construct the optimal reference for a given sample by
@@ -51,7 +51,7 @@ def File(MyFile):
 class SmartFormatter(argparse.HelpFormatter):
     def _split_lines(self, text, width):
         if text.startswith('R|'):
-            return text[2:].splitlines()  
+            return text[2:].splitlines()
         return argparse.HelpFormatter._split_lines(self, text, width)
 
 # Set up the arguments for this script
@@ -89,7 +89,7 @@ help='''R|Use this option to specify the name of the consensus
 sequence; use it when the AlignmentOfContigsToRefs argument is the
 alignment of contigs, consensus and mapping reference.
 We put each position in the alignment in one of the
-following four categories, then print the counts of 
+following four categories, then print the counts of
 each. (1) At least one of the flattened contigs agrees
 with the consensus. (2) All contigs disagree with the
 consensus. (3) At least one contig has a base and the
@@ -257,7 +257,8 @@ for position in range(StartOfFirstContig,EndOfLastContig+1):
     DictOfBasesHere[ContigName] = ContigSeq[position]
   BasesHere = set(DictOfBasesHere.values())
   if len(BasesHere) == 1:
-    BaseHere = DictOfBasesHere.values()[0]
+    #BaseHere = DictOfBasesHere.values()[0]
+    BaseHere = DictOfBasesHere[list(DictOfBasesHere)[0]]
   else:
     LengthOfLongestDesiredContig = 0
     for ContigName in DictOfBasesHere:
@@ -314,8 +315,8 @@ if ConsensusName != None:
             ContigBases.append(ContigSeq[pos])
       if len(set(ContigBases)) >= 2:
         # There are at least two different bases in the contigs here.
-        #print('pos', pos+1, 'consensus:', ConsensusSeq[pos], 'longest contig:', 
-        #FlattenedContigsSeq[pos], 'contig bases here:', ContigBases) 
+        #print('pos', pos+1, 'consensus:', ConsensusSeq[pos], 'longest contig:',
+        #FlattenedContigsSeq[pos], 'contig bases here:', ContigBases)
         if FlattenedContigsSeq[pos] == ConsensusSeq[pos]:
           NumPosLongestContigCorrect += 1
         else:
@@ -327,7 +328,7 @@ if ConsensusName != None:
   if CompareContigsToConsensus:
     for pos in range(0,AlignmentLength):
       ConsensusBase = ConsensusSeq[pos]
-      if ConsensusBase == 'N': 
+      if ConsensusBase == 'N':
         cat = None
       elif ContigCoverageByPosition[pos] == 0:
         if ConsensusBase == '?' or ConsensusBase == GapChar:
@@ -354,16 +355,16 @@ if ConsensusName != None:
           else:
             cat = 3
         elif ConsensusBase == GapChar:
-          if all(ContigBase != GapChar for ContigBase in ContigBases):  
+          if all(ContigBase != GapChar for ContigBase in ContigBases):
             cat = 2
           else:
             cat = None
         else:
-          if any(ContigBase == ConsensusBase for ContigBase in ContigBases):  
+          if any(ContigBase == ConsensusBase for ContigBase in ContigBases):
             cat = 1
           else:
             cat = 2
-          
+
       categories.append(cat)
     CatCounts = [0,0,0,0]
     for cat in categories:
@@ -371,7 +372,7 @@ if ConsensusName != None:
         CatCounts[cat-1] += 1
     print(' '.join(map(str, CatCounts)))
     exit(0)
-    
+
 
 #TotalContigCoverage = sum([1 for base in FlattenedContigsSeq if base != GapChar])
 #sys.stdout.write(str(len(ContigDict)) +' '+ str(TotalContigCoverage) +' ')
@@ -447,7 +448,7 @@ if args.print_best_score:
 if args.summarise_contigs_2:
   ContigsWithBestRef = [RefDict[BestRefName]] + ContigDict.values()
   NumSeqs = len(ContigsWithBestRef)
-  for column in xrange(AlignmentLength-1,-1,-1):
+  for column in range(AlignmentLength-1,-1,-1):
     if all(seq[column] == '-' for seq in ContigsWithBestRef):
       for i in range(NumSeqs):
         ContigsWithBestRef[i] = ContigsWithBestRef[i][:column] + \
@@ -498,7 +499,7 @@ for position in range(0,AlignmentLength):
 # Inserting line breaks: thanks Stackoverflow:
 def insert_newlines(string, every=50):
   lines = []
-  for i in xrange(0, len(string), every):
+  for i in range(0, len(string), every):
     lines.append(string[i:i+every])
   return '\n'.join(lines)
 

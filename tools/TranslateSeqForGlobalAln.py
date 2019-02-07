@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from __future__ import print_function
 
 ## Author: Chris Wymant, chris.wymant@bdi.ox.ac.uk
@@ -134,7 +134,7 @@ def PropagateNoCoverageChar(seq, LeftToRightDone=False):
   ACTG---?---ACTG
   becomes
   ACTG???????ACTG'''
-  
+
   if LeftToRightDone:
     seq = seq[::-1]
   BaseToLeftIsNoCoverage = False

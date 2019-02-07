@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from __future__ import print_function
 
 ## Author: Chris Wymant, chris.wymant@bdi.ox.ac.uk
@@ -153,7 +153,7 @@ def GetFreqs(BaseFreqsFile, consensus):
         continue
       fields = line.split(',')
       try:
-        freqs = map(int, fields[2:])
+        freqs = list(map(int, fields[2:]))
         assert len(freqs) == 6
       except (ValueError, AssertionError):
         print("Unexpected input format of", BaseFreqsFile + ". It appears that",
@@ -223,7 +223,7 @@ def GetFreqs(BaseFreqsFile, consensus):
     elif base == '-':
       # If the seq hasn't started yet, all base counts equal zero; if this is a
       # gap inside the seq, reproduce the base counts from the last position.
-      # This is just to facilitate the coverage calculation, for which we take 
+      # This is just to facilitate the coverage calculation, for which we take
       # the coverage (sum of counts) here to be equal to its last value before
       # the deletion, but we won't report the breakdown into different bases.
       freqs = LastPosFreqs
@@ -268,12 +268,12 @@ NumPosWithHigherCovIn1 = 0
 NumPosWithHigherCovIn2 = 0
 
 # Record each row of the csv file
-for PosMin1, (seq1freqs, seq2freqs) in enumerate(itertools.izip(AllSeq1freqs,
+for PosMin1, (seq1freqs, seq2freqs) in enumerate(zip(AllSeq1freqs,
 AllSeq2freqs)):
   PosInSeq1 = seq1PosConversions[PosMin1]
   PosInSeq2 = seq2PosConversions[PosMin1]
   outstring += '\n' + str(PosMin1+1) + ',' + str(PosInSeq1) + ',' + \
-  str(PosInSeq2) 
+  str(PosInSeq2)
 
   seq1cov = sum(seq1freqs[:5])
   seq2cov = sum(seq2freqs[:5])
@@ -294,7 +294,7 @@ AllSeq2freqs)):
       SimScoreCont = 'NA'
     else:
       seq1freqs = seq1freqs[:5]
-      seq2freqs = seq2freqs[:5]  
+      seq2freqs = seq2freqs[:5]
       if seq1cov == 0 or seq2cov == 0:
         SimScoreBin = 'NA'
         SimScoreCont = 'NA'
@@ -333,7 +333,7 @@ AllSeq2freqs)):
 # Print output
 if args.compare_snips_with_coverage:
   simple_total_diffs = 0
-  for PosMin1, (base1, base2) in enumerate(itertools.izip(seq1, seq2)):
+  for PosMin1, (base1, base2) in enumerate(zip(seq1, seq2)):
     if base1 != base2 and \
     PosMin1+1 >= args.start_pos_in_aln and \
     PosMin1+1 <= args.end_pos_in_aln and \

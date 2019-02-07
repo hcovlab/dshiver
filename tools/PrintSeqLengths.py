@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 from __future__ import print_function
 
 ## Author: Chris Wymant, chris.wymant@bdi.ox.ac.uk
@@ -67,7 +67,7 @@ if args.longest_gap and check_undetermined:
 
 def get_max_match_length(string, pattern):
   "Of all matches of a pattern to a string, we report the largest length."
-  match_lengths = [len(match) for match in re.findall(pattern, string)] 
+  match_lengths = [len(match) for match in re.findall(pattern, string)]
   if len(match_lengths) == 0:
     return 0
   return max(match_lengths)

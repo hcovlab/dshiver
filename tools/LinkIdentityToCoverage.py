@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from __future__ import print_function
 
 ## Author: Chris Wymant, chris.wymant@bdi.ox.ac.uk
@@ -108,10 +108,10 @@ for read in BamFile.fetch(RefName):
           break
         CoveragesByPos[pos] += 1
         IdentityTotalsByPos[pos] += identity
-  else:  
+  else:
     for pos in MappedPositions:
       CoveragesByPos[pos] += 1
-      IdentityTotalsByPos[pos] += identity  
+      IdentityTotalsByPos[pos] += identity
 
 
 # Combine identity totals for positions that have the same coverage, and count
@@ -133,7 +133,7 @@ for pos in range(RefLength):
 # (counting each read once per position-that-has-that-coverage, not once in
 # total) is the value of the coverage multiplied by the number of
 # positions-that-have-that-coverage. Dividing the total read identity associated
-# with this coverage (again, with each read contributing once per 
+# with this coverage (again, with each read contributing once per
 # position-that-has-that-coverage) by that total number of reads gives the mean
 # identity for that coverage.
 outstring = 'Coverage,Number of positions with that coverage,Mean identity'

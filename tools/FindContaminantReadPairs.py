@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 from __future__ import print_function
 #
 ## Author: Chris Wymant, chris.wymant@bdi.ox.ac.uk
@@ -107,7 +107,7 @@ for ReadName, [read1Hit, read1Evalue] in HitsFor1reads.items():
       ContaminantEvalue = read2Evalue
     else:
       ContaminantEvalue = read1Evalue
-      RefEvalue         = read2Evalue    
+      RefEvalue         = read2Evalue
     if ContaminantEvalue < RefEvalue:
       ContaminantReadPairs.append(ReadName)
   else:
@@ -125,7 +125,7 @@ with open(OutFile_2reads, 'w') as f:
 '''
 ## NB we discard pairs where one read blasted to the reference and the other
 ## did not blast to anything. Our reasons are two-fold. 1) Keeping such 'pairs'
-## would involve making the assumption that the read missing from the blast 
+## would involve making the assumption that the read missing from the blast
 ## table really exists; it might not. 2) Though we do keep reads where
 ## one read hits the reference and the other hits a contaminant (if the
 ## contaminant hit is not as good as the reference hit), it's not inconsistent
@@ -162,7 +162,7 @@ for ReadName, [read1Hit, read1Evalue] in HitsFor1reads.items():
       ContaminantEvalue = read2Evalue
     else:
       ContaminantEvalue = read1Evalue
-      RefEvalue         = read2Evalue    
+      RefEvalue         = read2Evalue
     if RefEvalue <= ContaminantEvalue:
       GoodReadPairs.append(ReadName)
 

@@ -1,8 +1,8 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from __future__ import print_function
 
 ## Author: Chris Wymant, chris.wymant@bdi.ox.ac.uk
-## Acknowledgement: I wrote this while funded by ERC Advanced Grant PBDR-339251 
+## Acknowledgement: I wrote this while funded by ERC Advanced Grant PBDR-339251
 ##
 ## Overview: TODO
 ExplanatoryMessage = '''This script finds specified sub-sequences inside a
@@ -43,7 +43,7 @@ parser.add_argument('alignment', type=File)
 parser.add_argument('NameOfChosenSeq', help='''The name of the sequence
 containing the chosen sub-sequence.''')
 parser.add_argument("-S", "--start", action='append', help='''Use this to
-specify a sub-sequence whose start coordinate you want. (You can 
+specify a sub-sequence whose start coordinate you want. (You can
 use this option multiple times to specify multiple sub-sequences e.g. -S AAAC -S
 AAAT ...)''')
 parser.add_argument("-E", "--end", action='append', help='''Use this to
@@ -105,12 +105,12 @@ if not ChosenRef in SeqDict:
   exit(1)
 ChosenRefSeq = SeqDict[ChosenRef]
 
-# Define the set of unique primers, i.e. StartPrimers+EndPrimers but not 
+# Define the set of unique primers, i.e. StartPrimers+EndPrimers but not
 # double counting those that appear in both. Record their lengths in a dict.
 AllUniquePrimers = StartPrimers + \
 [primer for primer in EndPrimers if not primer in StartPrimers]
 NumUniquePrimers = len(AllUniquePrimers)
-PrimerLengths = {primer : len(primer) for primer in AllUniquePrimers} 
+PrimerLengths = {primer : len(primer) for primer in AllUniquePrimers}
 
 # Finds the position in the alignment, for each primer, after
 # which we should stop checking for primer-reference matches because the number
@@ -174,7 +174,7 @@ for PositionMin1,base in enumerate(ChosenRefSeq):
             EndPrimerPositions[primer] = PositionMin1 +StepsForward+1
           break
       StepsForward += 1
-        
+
 # Check that all primers were found
 MissingPrimers = [primer for primer in AllUniquePrimers if \
 (not primer in StartPrimerPositions) and (not primer in EndPrimerPositions)]

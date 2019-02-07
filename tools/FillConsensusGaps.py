@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from __future__ import print_function
 
 ## Author: Chris Wymant, chris.wymant@bdi.ox.ac.uk
@@ -13,7 +13,7 @@ consensus: where the consensus has '?' or 'N' we use the reference base; where
 the consensus has an ambiguity code we take the first (in alphabetical order) of
 the bases A, C, G or T that that code represents; otherwise, we use the base (or
 gap) of the consensus. Output is printed to stdout suitable for redirection to a
-fasta file.''' 
+fasta file.'''
 
 import argparse
 import os
@@ -66,7 +66,7 @@ if len(ConsensusAsString) != len(RefAsString):
 # The main bit.
 NewConsensus = ''
 ExpectedBases = ['A', 'C', 'G', 'T', '-']
-for ConsensusBase, RefBase in itertools.izip(ConsensusAsString, RefAsString):
+for ConsensusBase, RefBase in zip(ConsensusAsString, RefAsString):
   if ConsensusBase == '?' or ConsensusBase == 'N':
     NewConsensus += RefBase
   elif ConsensusBase in ExpectedBases:

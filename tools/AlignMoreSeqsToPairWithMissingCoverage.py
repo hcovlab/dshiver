@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from __future__ import print_function
 
 ## Author: Chris Wymant, chris.wymant@bdi.ox.ac.uk
@@ -7,7 +7,7 @@ from __future__ import print_function
 ## Overview:
 ExplanatoryMessage = '''Aligns more sequences to a pairwise alignment in which
 the first sequence contains missing coverage, i.e. the "?" character. Output is
-printed to stdout suitable for redirection to a fasta-format file. The pairwise 
+printed to stdout suitable for redirection to a fasta-format file. The pairwise
 alignment is nominally the consensus (called from parsing mapped reads) and the
 reference used for mapping, in that order. Alignment is performed using mafft;
 mafft does not know what missing coverage is, hence the need for this program.
@@ -94,7 +94,7 @@ if len(ConsensusAsString) != len(RefAsString):
   exit(1)
 NewConsensusAsString = ''
 NewRefAsString = ''
-for ConsensusBase, RefBase in itertools.izip(ConsensusAsString, RefAsString):
+for ConsensusBase, RefBase in zip(ConsensusAsString, RefAsString):
   if RefBase == '-' and (ConsensusBase == '-' or ConsensusBase == '?'):
     continue
   else:
@@ -112,7 +112,7 @@ IDsOfSeqsToBeAdded = [seq.id for seq in \
 SeqIO.parse(open(args.OtherSeqsToBeAdded),'fasta')]
 if consensus.id in IDsOfSeqsToBeAdded:
   print('A sequence in', args.OtherSeqsToBeAdded, 'is called', consensus.id +
-  ', like the consensus in', args.SeqPairWithMissingCov + 
+  ', like the consensus in', args.SeqPairWithMissingCov +
   '. Rename to avoid such a clash. Quitting.', file=sys.stderr)
   exit(1)
 
@@ -138,7 +138,7 @@ with open(args.temp_file_2, 'w') as f:
     print('Problem calling mafft. Quitting.', file=sys.stderr)
     raise
 
-# Read in the aligned seqs. Note which one is the consensus. Check all the 
+# Read in the aligned seqs. Note which one is the consensus. Check all the
 # expected seqs are recovered.
 AlignedSeqs = []
 for i, seq in enumerate(SeqIO.parse(open(args.temp_file_2),'fasta')):
@@ -202,8 +202,8 @@ for ProgThroughPreAln, PreAlnConsensusBit in enumerate(PreAlnConsensusBits):
   PostAlnConsensusBit     = PostAlnConsensusBits[ProgThroughPostAln]
   PostAlnConsensusBitType = PostAlnConsensusBitTypes[ProgThroughPostAln]
 
-  # A PreAln BitType 0 or 1 should become a 1 after alignment. We want the 
-  # PostAln length of the bit (it could be longer due to accommodating a new 
+  # A PreAln BitType 0 or 1 should become a 1 after alignment. We want the
+  # PostAln length of the bit (it could be longer due to accommodating a new
   # insertion), but the PreAln BitType.
   if PreAlnConsensusBitType in [0,1]:
     if PostAlnConsensusBitType != 1:

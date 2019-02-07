@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from __future__ import print_function
 
 ## Author: Chris Wymant, chris.wymant@bdi.ox.ac.uk
@@ -18,8 +18,8 @@ import os
 import sys
 from collections import Counter
 from re import sub
-from Bio import Seq  
-from Bio import SeqIO  
+from Bio import Seq
+from Bio import SeqIO
 
 # Define a function to check files exist, as a type for the argparse.
 def File(MyFile):
@@ -70,7 +70,7 @@ with open(args.alignment_csv, 'r') as f:
     str(lin_num_min_1 + 1)
 
     # Count all of the different kmers at this position. Remove "N" and "-" from
-    # every kmer, skip empty ones, merge ones that are now identical. 
+    # every kmer, skip empty ones, merge ones that are now identical.
     unprocessed_kmers = fields[2:]
     unprocessed_kmer_counts = Counter(unprocessed_kmers)
     kmer_counts = Counter()

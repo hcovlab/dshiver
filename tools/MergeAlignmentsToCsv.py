@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from __future__ import print_function
 
 ## Author: Chris Wymant, chris.wymant@bdi.ox.ac.uk
@@ -63,7 +63,7 @@ def GetSeqToRefComparison(File):
 
   # Get the ref seq
   if not args.RefName in AllSeqNames:
-    print(args.RefName, 'does not appear in', File + '. Quitting.', 
+    print(args.RefName, 'does not appear in', File + '. Quitting.',
     file=sys.stderr)
     exit(1)
   RefPosition = AllSeqNames.index(args.RefName)
@@ -78,7 +78,7 @@ def GetSeqToRefComparison(File):
   # mergin the results doesn't truncate longer strings.
   RefLength = AlnLength - RefSeq.count("-")
   if RefLength == 0:
-    print(args.RefName, 'in', File, 'contains no bases. Quitting.', 
+    print(args.RefName, 'in', File, 'contains no bases. Quitting.',
     file=sys.stderr)
     exit(1)
   NumSeqs = len(AllSeqNames)
@@ -96,7 +96,7 @@ def GetSeqToRefComparison(File):
     RefPos0based += 1
 
     # If the reference has one or more gap chars after this position, we want to
-    # consider all those positions together with this one. 
+    # consider all those positions together with this one.
     SizeOfRefDeletionAfterThisPos = 0
     while AlnPos0based + SizeOfRefDeletionAfterThisPos < AlnLength - 1 and \
     RefSeq[AlnPos0based + SizeOfRefDeletionAfterThisPos + 1] == '-':
@@ -129,7 +129,7 @@ for FileNum, FastaFile in enumerate(args.alignment):
 
     # Check that, for any sequence we're seeing in this file but have already
     # seen (which will always be the case for the reference, but possibly others
-    # if present in multiple files), we get the same result. If so, remove them 
+    # if present in multiple files), we get the same result. If so, remove them
     # from the new matrix and its key before updating all the results.
     PreviouslyEncounteredSeqNames = \
     set(KeyForAllRowNames).intersection(KeyForRowNames)
@@ -181,6 +181,6 @@ np.savetxt(sys.stdout, AllResults, delimiter=",", fmt='%s', comments='',
 header='Position in ' + args.RefName + ',Base in ' + args.RefName + ',' + \
 ','.join('kmer in ' + name for name in KeyForAllRowNames if \
 name != args.RefName))
-    
+
 
 

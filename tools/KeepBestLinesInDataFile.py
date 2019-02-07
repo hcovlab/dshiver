@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from __future__ import print_function
 
 ## Author: Chris Wymant, chris.wymant@bdi.ox.ac.uk
@@ -57,11 +57,11 @@ args = parser.parse_args()
 
 if args.sort_field > args.num_fields:
   print("Error: sort_field cannot be larger than num_fields. Quitting.",
-  file=sys.stderr) 
+  file=sys.stderr)
   exit(1)
 if args.id_field > args.num_fields:
   print("Error: id_field cannot be larger than num_fields. Quitting.",
-  file=sys.stderr) 
+  file=sys.stderr)
   exit(1)
 
 rows_to_keep = OrderedDict()
@@ -85,7 +85,7 @@ with open(args.in_file, 'r') as f:
     except ValueError:
       print("Error: could not understand value", fields[args.sort_field - 1],
       "in field", args.sort_field, "on line", lin_num_min_1 + 1, "in",
-      args.in_file, "as a float. Quitting.", file=sys.stderr) 
+      args.in_file, "as a float. Quitting.", file=sys.stderr)
       exit(1)
 
     id_ = fields[args.id_field - 1]
