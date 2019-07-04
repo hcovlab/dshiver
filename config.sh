@@ -36,8 +36,8 @@ trimmomatic="trimmomatic"
 MafftArgsForPairwise='--maxiterate 1000 --localpair'
 
 # Minimum contig length: contigs shorter than this will be discarded at the
-# start. In addition, when contigs are blasted against the existing reference 
-# set, we will only keep hits for which the length of the hit multipled by its 
+# start. In addition, when contigs are blasted against the existing reference
+# set, we will only keep hits for which the length of the hit multipled by its
 # identity to the reference is at least this length.
 MinContigLength=300
 # A contig will be split/cut if it has multiple blast hits. After alignment to
@@ -104,7 +104,7 @@ mapper="smalt"
 # A summary of the mapping options used below:
 # -x means a read and its mate are mapped independently (not constraining them
 # to be close), -y sets the minimum fraction of identical nucleotides a read
-# must have to its reference before it is considered mapped, -j is the minimum 
+# must have to its reference before it is considered mapped, -j is the minimum
 # insert size and -i the maximum insert size: outside of this range, the read
 # pair is still mapped, but flagged as improperly paired.
 smaltIndexOptions="-k 15 -s 3"
@@ -170,7 +170,7 @@ MinBaseFrac=-1
 # keep only one pair and discard the rest? This can cause loss of diversity in
 # the reads due to true biological variation as well sequencing error. We
 # suggest you use this only if you understand duplication in your sequencing
-# data... 
+# data...
 deduplicate=false
 # Desired command (note that MarkDuplicatesWithMateCigar exists, which may be
 # better, however it still seems to have beta status; also note that you can
@@ -179,14 +179,14 @@ deduplicate=false
 # or the associated shiver commands will break):
 DeduplicationCommand="picard MarkDuplicates"
 
-# Shall we remap to the consensus? (For remapping, gaps in coverage in the 
+# Shall we remap to the consensus? (For remapping, gaps in coverage in the
 # consensus will filled in by the corresponding part of the orginal reference,
 # and ambiguity codes will simplified to just one of the bases they represent.
-# Because of this, if remapping to the consensus, you are strongly advised to 
+# Because of this, if remapping to the consensus, you are strongly advised to
 # set the MinBaseFrac parameter above to any negative value.)
 remap=true
 
-# Shall we map contaminant reads to the reference (separately), to see which 
+# Shall we map contaminant reads to the reference (separately), to see which
 # reads would have contaminanted our final bam file had they not been removed?
 MapContaminantReads=false
 
@@ -201,7 +201,7 @@ GiveHXB2coords=true
 # Shall we align the contigs to the consensus, for comparison?
 AlignContigsToConsensus=false
 
-# With the default value of false, the reads in their state just before mapping 
+# With the default value of false, the reads in their state just before mapping
 # (after any trimming of primers or adapters or low-quality bases, and after
 # removal of suspected contaminant reads) will have 'temp_' prepended to their
 # filenames so that they removed by the "rm temp*" command that you probably
