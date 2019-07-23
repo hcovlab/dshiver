@@ -2,8 +2,88 @@ import json
 import requests
 import sys
 import xlsxwriter
+from requests.exceptions import ConnectionError
+import time
 
-file = open(sys.argv[1], 'r')
+# Create English-Hungarian dictionary in order to translate the results
+firstColumnDict = {
+    'PRMajor': 'PI elsődleges mutációk:',
+    'PRAccessory': 'PI másodlagos mutációk:',
+    'INMajor': 'INI elsődleges mutációk:',
+    'INAccessory': 'INI másodlagos mutációk:',
+    'NNRTI': 'NNRTI mutációk',
+    'NRTI': 'NRTI mutációk',
+    'Drug Class Name': 'HIV-1 törzsek gyógyszerrezisztenciájának meghatározása genomikus szekvenálással'
+}
+secondColumnDict = {
+    'PI': 'Proteáz inhibitorok (PI)',
+    'NNRTI': 'Nukleozid reverz transzkriptáz inhibitorok (NRTI)',
+    'NRTI': 'Nem nukleozid reverz transzkriptáz inhibitorok (NNRTI)',
+    'INSTI': 'Integráz inhibitorok (INI)',
+    'Susceptible': 'nem rezisztens',
+    'Low-Level Resistance': 'kis mértékű rezisztencia',
+    'Intermediate Resistance': 'közepes szintű rezisztencia',
+    'High-Level Resistance': 'nagy mértékű rezisztencia',
+    '': 'nincs'
+}
+# Formulate query
+query = '''query example($sequences: [UnalignedSequenceInput]!) {
+        viewer {
+            currentVersion { text, publishDate },
+            sequenceAnalysis(sequences: $sequences) {
+            inputSequence {
+                header,
+            },
+            validationResults {
+                level,
+                message
+            },
+            bestMatchingSubtype { display },
+            drugResistance {
+                gene {
+                name
+                },
+                drugScores {
+                drugClass {
+                    name,
+                    fullName,
+                    drugs {
+                      name,
+                      displayAbbr,
+                      fullName
+                    }
+                  },
+                drug { displayAbbr, fullName },
+                SIR,
+                score,
+                level,
+                text,
+                partialScores {
+                    mutations {
+                    text
+                    },
+                    score
+                }
+                },
+                mutationsByTypes {
+                mutationType,
+                  mutations {
+                    text,
+                    shortText
+                  }
+                },
+                commentsByTypes {
+                commentType,
+                comments {
+                    type,
+                    text,
+                    highlightText
+                }
+                }
+            }
+            }
+        }
+        }'''
 
 
 def load(file):
@@ -31,189 +111,145 @@ def load(file):
     return sequences
 
 
-sequences = {'sequences': load(file)}
-
-
-resp = requests.post(
-    'https://hivdb.stanford.edu/graphql',
-    data=json.dumps({
-        'query': '''query example($sequences: [UnalignedSequenceInput]!) {
-viewer {
-    currentVersion { text, publishDate },
-    sequenceAnalysis(sequences: $sequences) {
-    # Begin of sequenceAnalysis fragment
-    inputSequence {
-        header,
-    },
-    validationResults {
-        level,
-        message
-    },
-    bestMatchingSubtype { display },
-    drugResistance {
-        gene {
-        name
-        },
-        drugScores {
-        drugClass {
-            name,
-            fullName,
-            drugs {
-              name,
-              displayAbbr,
-              fullName
-            }
-          },
-        drug { displayAbbr, fullName },
-        SIR,
-        score,
-        level,
-        text,
-        partialScores {
-            mutations {
-            text
-            },
-            score
+def request(file):
+    sequences = {'sequences': load(file)}
+    resp = requests.post(
+        'https://hivdb.stanford.edu/graphql',
+        data=json.dumps({
+            'query': query,
+            'variables': sequences
+        }),
+        headers={
+            'Content-Type': 'application/json'
         }
-        },
-        mutationsByTypes {
-        mutationType,
-          mutations {
-            text,
-            shortText
-          }
-        },
-        commentsByTypes {
-        commentType,
-        comments {
-            type,
-            text,
-            highlightText
-        }
-        }
-    }
-    # End of sequenceAnalysis fragment
-    }
-}
-}''',
-        'variables': sequences
-    }),
-    headers={
-        'Content-Type': 'application/json'
-    }
-)
-
-alldata = resp.json()['data']['viewer']['sequenceAnalysis']
-allgenes = []
-drugs = {}
-genename = {
-    "HIV-1 törzsek gyógyszerrezisztenciájának meghatározása genomikus szekvenálással": ""}
-geneitem = {}
-muttypes = {}
-for data in alldata:
-    general = {
-        "header": data['inputSequence']['header'],
-        "best matching subtype": data['bestMatchingSubtype']['display']
-    }
-    for index, gene in enumerate(data['drugResistance']):
-        isRTI = False
-        for index, drug in enumerate(gene['drugScores']):
-            if genename["HIV-1 törzsek gyógyszerrezisztenciájának meghatározása genomikus szekvenálással"] != drug['drugClass']['name']:
-                geneitem.update(genename)
-                geneitem.update(muttypes)
-                geneitem.update(drugs)
-                allgenes.append(geneitem)
-                drugs = {}
-                geneitem = {}
-                druginfo = {}
-                muttypes = {}
-
-                for index, mutypes in enumerate(gene['mutationsByTypes']):
-                    if mutypes['mutationType'] == drug['drugClass']['name']:
-                        isRTI = True
-                        mutstr = ''
-                        for mut in mutypes['mutations']:
-                            mutstr = mutstr + mut['text'] + ', '
-                        if mutstr == '':
-                            mutstr = 'nincs  '
-                        muttypes.update(
-                            {mutypes['mutationType']: mutstr[:len(mutstr)-2]})
-                genename = {
-                    "HIV-1 törzsek gyógyszerrezisztenciájának meghatározása genomikus szekvenálással": drug['drugClass']['name']}
-
-            druginfo = {drug['drug']['fullName'] +
-                        " (" + drug['drug']['displayAbbr'] + ")": drug['text']}
-            drugs.update(druginfo)
-        if not isRTI:
-            for index, mutypes in enumerate(gene['mutationsByTypes']):
-                mutstr = ''
-                if mutypes['mutationType'] != 'Other':
-                    for mut in mutypes['mutations']:
-                        mutstr = mutstr + mut['text'] + ', '
-                    if mutstr == '':
-                        mutstr = 'nincs  '
-                    muttypes.update(
-                        {gene['gene']['name'] + mutypes['mutationType']: mutstr[:len(mutstr)-2]})
-geneitem.update(genename)
-geneitem.update(muttypes)
-geneitem.update(drugs)
-allgenes.append(geneitem)
-
-allgenes = allgenes[1:]
-workbook = xlsxwriter.Workbook(sys.argv[2])
-worksheet = workbook.add_worksheet()
-
-worksheet.set_column('A:A', 40)
-worksheet.set_column('B:D', 30)
+    )
+    return resp
 
 
-bold = workbook.add_format({'bold': True, 'text_wrap': True, 'valign': 'top'})
-text = workbook.add_format({'text_wrap': True, 'valign': 'top'})
+def parseData(alldata):
+    mutations = [], []
+    drugClassName, mutationtype = '', ''
+    firstCol, secondCol, drugClassNames, resistances = [], [], [], []
 
-worksheet.write('A1', 'Megnevezés', bold)
-worksheet.write('B1', 'Eredmény', bold)
-worksheet.write('C1', 'Minősítés', bold)
-worksheet.write('D1', 'Vélemény', bold)
+    for data in alldata:
+        for gene in data['drugResistance']:
+            isRTI = False
+            for drug in gene['drugScores']:
+                if drugClassName != drug['drugClass']['name']:
+                    firstCol.append(
+                        ['Drug Class Name', mutationtype] + drugClassNames)
+                    secondCol.append(
+                        [drugClassName] + [', '.join(map(str, mutations))] + resistances)
 
-firstColumnDict = {
-    'PRMajor': 'PI elsődleges mutációk:',
-    'PRAccessory': 'PI másodlagos mutációk:',
-    'INMajor': 'INI elsődleges mutációk:',
-    'INAccessory': 'INI másodlagos mutációk:',
-    'NNRTI': 'NNRTI mutációk',
-    'NRTI': 'NRTI mutációk',
-}
-secondColumnDict = {
-    'PI': 'Proteáz inhibitorok (PI)',
-    'NNRTI': 'Nukleozid reverz transzkriptáz inhibitorok (NRTI)',
-    'NRTI': 'Nem nukleozid reverz transzkriptáz inhibitorok (NNRTI)',
-    'INSTI': 'Integráz inhibitorok (INI)',
-    'Susceptible': 'nem rezisztens',
-    'Low-Level Resistance': 'alacsony fokú rezisztencia',
-    'Intermediate Resistance': 'mérsékelt rezisztencia',
-    'High-Level Resistance': 'magas fokú rezisztencia'
-}
-row = 2
-for index, drugClass in enumerate(allgenes):
-    for index, a in enumerate(list(drugClass.keys())):
-        if index == 0:
-            worksheet.write('A' + str(row), a, bold)
-        elif index > 0 and a not in firstColumnDict.keys():
-            worksheet.write('A' + str(row), a, text)
+                    drugClassNames = []
+                    resistances = []
+
+                    for mutationtypes in gene['mutationsByTypes']:
+                        if mutationtypes['mutationType'] == drug['drugClass']['name']:
+                            isRTI = True
+                            mutations = []
+                            for mutation in mutationtypes['mutations']:
+                                mutations.append(mutation['text'])
+                            mutationtype = mutationtypes['mutationType']
+                    drugClassName = drug['drugClass']['name']
+
+                drugClassNames.append(
+                    drug['drug']['fullName'] + ' (' + drug['drug']['displayAbbr'] + ')')
+                resistances.append(drug['text'])
+
+            if not isRTI:
+                for mutationtypes in gene['mutationsByTypes']:
+                    mutations = []
+                    if mutationtypes['mutationType'] != 'Other':
+                        for mutation in mutationtypes['mutations']:
+                            mutations.append(mutation['text'])
+                        mutationtype = gene['gene']['name'] + \
+                            mutationtypes['mutationType']
+
+    firstCol.append(['Drug Class Name', mutationtype] + drugClassNames)
+    secondCol.append([drugClassName] +
+                     [', '.join(map(str, mutations))] + resistances)
+
+    firstCol = firstCol[1:]
+    secondCol = secondCol[1:]
+
+    return firstCol, secondCol
+
+
+def writexlsx(firstCol, secondCol, file):
+
+    workbook = xlsxwriter.Workbook(file)
+    worksheet = workbook.add_worksheet()
+
+    worksheet.set_column('A:A', 40)
+    worksheet.set_column('B:D', 30)
+
+    bold = workbook.add_format(
+        {'bold': True, 'text_wrap': True, 'valign': 'top'})
+    text = workbook.add_format({'text_wrap': True, 'valign': 'top'})
+
+    worksheet.write('A1', 'Megnevezés', bold)
+    worksheet.write('B1', 'Eredmény', bold)
+    worksheet.write('C1', 'Minősítés', bold)
+    worksheet.write('D1', 'Vélemény', bold)
+
+    row = 2
+    for index, drugClass in enumerate(firstCol):
+        for index, a in enumerate(drugClass):
+            if index == 0 and a not in firstColumnDict.keys():
+                worksheet.write('A' + str(row), a, bold)
+            if index == 0:
+                worksheet.write('A' + str(row), firstColumnDict[a], bold)
+            elif index > 0 and a not in firstColumnDict.keys():
+                worksheet.write('A' + str(row), a, text)
+            else:
+                worksheet.write('A' + str(row), firstColumnDict[a], text)
+            row = row + 1
+
+    row = 2
+    for index, drugClass in enumerate(secondCol):
+        for index, a in enumerate(drugClass):
+            if index == 0:
+                worksheet.write('B' + str(row), secondColumnDict[a], bold)
+            elif index > 0 and a not in secondColumnDict.keys():
+                worksheet.write('B' + str(row), a, text)
+            else:
+                worksheet.write('B' + str(row), secondColumnDict[a], text)
+            row = row + 1
+
+    workbook.close()
+
+
+try:
+    file = open(sys.argv[1], 'r')
+except FileNotFoundError:
+    print("File not found.")
+else:
+    i = 1
+    while True and i < 6:
+        try:
+            resp = request(file)
+        except ConnectionError:
+            print("Iteration " + str(i) + " failed due to connection error.")
+            i = i + 1
+            time.sleep(10)
         else:
-            worksheet.write('A' + str(row), firstColumnDict[a], text)
-        row = row + 1
+            try:
+                alldata = resp.json()['data']['viewer']['sequenceAnalysis']
+                firstCol, secondCol = parseData(alldata)
 
-row = 2
-for index, drugClass in enumerate(allgenes):
-    for index, a in enumerate(list(drugClass.values())):
-        if index == 0:
-            worksheet.write('B' + str(row), secondColumnDict[a], bold)
-        elif index > 0 and a not in secondColumnDict.keys():
-            worksheet.write('B' + str(row), a, text)
-        else:
-            worksheet.write('B' + str(row), secondColumnDict[a], text)
-        row = row + 1
+            except TypeError:
+                if alldata != []:
+                    if alldata[0]['validationResults'] != []:
+                        for error in alldata[0]['validationResults']:
+                            print(
+                                'Error Level: ' + error['level'] + ', Error Message: ' + error['message'])
+                else:
+                    print("Empty file")
 
-
-workbook.close()
+            else:
+                try:
+                    writexlsx(firstCol, secondCol, sys.argv[2])
+                except PermissionError:
+                    print("Couldn't write XLSX file due to permission error.")
+            break
