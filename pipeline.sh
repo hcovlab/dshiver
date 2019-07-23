@@ -3,12 +3,25 @@
 set -u
 set -o pipefail
 
-source /shiver/shiver_pipeline.conf
-if [ -f /data/shiver_pipeline.conf ]
+source /shiver/pipeline.conf
+if [ -f /data/pipeline.conf ]
 then
-    echo "config file found"
-    source /data/shiver_pipeline.conf
+    echo "Pipeline config file found, using the given one"
+    source /data/pipeline.conf
+else
+    echo "Pipeline config does not file found, using the default one"
 fi
+
+# copy shiver config:
+if [ -f /data/config.sh ]
+then
+    echo "Shiver config file found, using the given one"
+    cp /data/config.sh /shiver/config.sh
+else
+    echo "Shiver config does not file found, using the default one"
+fi
+
+LOGFILE="/data/$Prefix.log"
 
 function usage {
     echo "SHIVER pipeline"
@@ -22,6 +35,9 @@ function usage {
     echo "    shell:"
     echo "        Run bash shell"
     echo ""
+    echo "    gen_config:"
+    echo "        generate delault config file in output directory"
+    echo ""
     echo "    de_novo_assembly:"
     echo "        Run iva"
     echo ""
@@ -34,118 +50,127 @@ function usage {
     echo "    map_reads:"
     echo "        Run shiver_map_reads"
     echo ""
+    echo "    full:"
+    echo "        Run full pipeleine"
+    echo ""
     echo ""
 }
 
 function de_novo_assembly {
-    if [ -z ${ForwardReads+x} ]; then echo "ERROR: missing ForwardReads" 1>&2; exit 2; fi
-    if [ -z ${ReverseReads+x} ]; then echo "ERROR: missing ReverseReads" 1>&2; exit 2; fi
-    if [ -f /data/$ForwardReads ]; then echo ""; else echo "error: file not found $ForwardReads"; exit 3; fi
-    if [ -f /data/$ReverseReads ]; then echo ""; else echo "error: file not found $ReverseReads"; exit 3; fi
+    if [ -z ${ForwardReads+x} ]; then echo "ERROR: missing ForwardReads" | tee -a $LOGFILE; exit 2; fi
+    if [ -z ${ReverseReads+x} ]; then echo "ERROR: missing ReverseReads" | tee -a $LOGFILE; exit 2; fi
+    if [ -f /data/$ForwardReads ]; then echo ""; else echo "error: file not found $ForwardReads" | tee -a $LOGFILE; exit 3; fi
+    if [ -f /data/$ReverseReads ]; then echo ""; else echo "error: file not found $ReverseReads" | tee -a $LOGFILE; exit 3; fi
     echo "\n========== start iva ==========\n"
     cd /data_tmp
     # reads_1.fastq
     if [[ /data/$ForwardReads == *.gz ]]
     then
-        cp /data/$ForwardReads /data_tmp/reads_1.fastq.gz
+        cp /data/$ForwardReads /data_tmp/reads_1.fastq.gz 2>&1 | tee -a $LOGFILE
     else
-        cp /data/$ForwardReads /data_tmp/reads_1.fastq
-        gzip /data_tmp/reads_1.fastq
+        cp /data/$ForwardReads /data_tmp/reads_1.fastq 2>&1 | tee -a $LOGFILE
+        gzip /data_tmp/reads_1.fastq 2>&1 | tee -a $LOGFILE
     fi
     # reads_2.fastq
     if [[ /data/$ReverseReads == *.gz ]]
     then
-        cp /data/$ReverseReads /data_tmp/reads_2.fastq.gz
+        cp /data/$ReverseReads /data_tmp/reads_2.fastq.gz 2>&1 | tee -a $LOGFILE
     else
-        cp /data/$ReverseReads /data_tmp/reads_2.fastq
-        gzip /data_tmp/reads_2.fastq
+        cp /data/$ReverseReads /data_tmp/reads_2.fastq 2>&1 | tee -a $LOGFILE
+        gzip /data_tmp/reads_2.fastq 2>&1 | tee -a $LOGFILE
     fi
-    iva -f reads_1.fastq.gz -r reads_2.fastq.gz /data_tmp/IVAout
-    cp /data_tmp/IVAout/contigs.fasta /data/${Prefix}_DeNovoContigs.fasta
-    echo "\n========== iva finished ==========\n"
+    iva -f reads_1.fastq.gz -r reads_2.fastq.gz /data_tmp/IVAout 2>&1 | tee -a $LOGFILE
+    cp /data_tmp/IVAout/contigs.fasta /data/${Prefix}_DeNovoContigs.fasta 2>&1 | tee -a $LOGFILE
+    echo "\n========== iva finished ==========\n"  2>&1 | tee -a $LOGFILE
 }
 
 function shiver_init {
-    if [ -z ${ShiverConfig+x} ]; then echo "ERROR: missing ShiverConfig" 1>&2; exit 2; fi
-    if [ -z ${RefAlignment+x} ]; then echo "ERROR: missing RefAlignment" 1>&2; exit 2; fi
-    if [ -z ${Prefix+x} ]; then echo "ERROR: missing Prefix" 1>&2; exit 2; fi
-    if [ -f $ShiverConfig ]; then echo ""; else echo "error: file not found $ShiverConfig"; exit 3; fi
-    if [ -f /data/$RefAlignment ]; then echo ""; else echo "error: file not found $RefAlignment"; exit 3; fi
-    echo "\n========== start shiver_init.sh ==========\n"
+    if [ -z ${ShiverConfig+x} ]; then echo "ERROR: missing ShiverConfig"  2>&1 | tee -a $LOGFILE; exit 2; fi
+    if [ -z ${RefAlignment+x} ]; then echo "ERROR: missing RefAlignment"  2>&1 | tee -a $LOGFILE; exit 2; fi
+    if [ -z ${Prefix+x} ]; then echo "ERROR: missing Prefix"  2>&1 | tee -a $LOGFILE; exit 2; fi
+    if [ -f $ShiverConfig ]; then echo ""; else echo "error: file not found $ShiverConfig" 2>&1 | tee -a $LOGFILE; exit 3; fi
+    if [ -f /data/$RefAlignment ]; then echo ""; else echo "error: file not found $RefAlignment" 2>&1 | tee -a $LOGFILE; exit 3; fi
+    echo "\n========== start shiver_init.sh ==========\n" 2>&1 | tee -a $LOGFILE
     cd /data_tmp
-    mkdir ShiverInitDir
-    cp $ShiverConfig /data_tmp/config.sh
-    cp /data/$RefAlignment /data_tmp/RefAlignment.fasta
-    cp /data/$Adapters /data_tmp/Adapters.fasta
-    cp /data/$Primers /data_tmp/Primers.fasta
-    bash /shiver/shiver_init.sh /data_tmp/ShiverInitDir /data_tmp/config.sh /data_tmp/RefAlignment.fasta /data_tmp/Adapters.fasta /data_tmp/Primers.fasta
-    echo "\n========== shiver shiver_init.sh ==========\n"
+    mkdir ShiverInitDir 2>&1 | tee -a $LOGFILE
+    cp $ShiverConfig /data_tmp/config.sh 2>&1 | tee -a $LOGFILE
+    cp /data/$RefAlignment /data_tmp/RefAlignment.fasta 2>&1 | tee -a $LOGFILE
+    cp /data/$Adapters /data_tmp/Adapters.fasta 2>&1 | tee -a $LOGFILE
+    cp /data/$Primers /data_tmp/Primers.fasta 2>&1 | tee -a $LOGFILE
+    bash /shiver/shiver_init.sh /data_tmp/ShiverInitDir /data_tmp/config.sh /data_tmp/RefAlignment.fasta /data_tmp/Adapters.fasta /data_tmp/Primers.fasta 2>&1 | tee -a $LOGFILE
+    echo "\n========== shiver shiver_init.sh ==========\n" 2>&1 | tee -a $LOGFILE
 }
 
 function shiver_align_contigs {
-    if [ -z ${ShiverConfig+x} ]; then echo "ERROR: missing ShiverConfig" 1>&2; exit 2; fi
-    if [ -z ${RefAlignment+x} ]; then echo "ERROR: missing RefAlignment" 1>&2; exit 2; fi
-    if [ -z ${Prefix+x} ]; then echo "ERROR: missing Prefix" 1>&2; exit 2; fi
-    if [ -f $ShiverConfig ]; then echo ""; else echo "error: file not found $ShiverConfig"; exit 3; fi
-    if [ -f /data/$RefAlignment ]; then echo ""; else echo "error: file not found $RefAlignment"; exit 3; fi
-    echo "\n========== start shiver_align_contigs.sh ==========\n"
+    if [ -z ${ShiverConfig+x} ]; then echo "ERROR: missing ShiverConfig" 2>&1 | tee -a $LOGFILE; exit 2; fi
+    if [ -z ${RefAlignment+x} ]; then echo "ERROR: missing RefAlignment" 2>&1 | tee -a $LOGFILE; exit 2; fi
+    if [ -z ${Prefix+x} ]; then echo "ERROR: missing Prefix" 2>&1 | tee -a $LOGFILE; exit 2; fi
+    if [ -f $ShiverConfig ]; then echo ""; else echo "error: file not found $ShiverConfig" 2>&1 | tee -a $LOGFILE; exit 3; fi
+    if [ -f /data/$RefAlignment ]; then echo ""; else echo "error: file not found $RefAlignment" 2>&1 | tee -a $LOGFILE; exit 3; fi
+    echo "\n========== start shiver_align_contigs.sh ==========\n" 2>&1 | tee -a $LOGFILE
     cd /data_tmp
     # Contigs.fasta
-    if [ -f /data/${Prefix}_DeNovoContigs.fasta ]; then echo ""; else echo "error: file not found ${Prefix}_DeNovoContigs.fasta"; exit 3; fi
-    cp /data/${Prefix}_DeNovoContigs.fasta /data_tmp/Contigs.fasta
+    if [ -f /data/${Prefix}_DeNovoContigs.fasta ]; then echo ""; else echo "error: file not found ${Prefix}_DeNovoContigs.fasta" 2>&1 | tee -a $LOGFILE; exit 3; fi
+    cp /data/${Prefix}_DeNovoContigs.fasta /data_tmp/Contigs.fasta 2>&1 | tee -a $LOGFILE
     # run
-    bash /shiver/shiver_align_contigs.sh /data_tmp/ShiverInitDir /data_tmp/config.sh /data_tmp/Contigs.fasta $Prefix
-    echo "\n========== stop shiver_align_contigs.sh ==========\n"
+    bash /shiver/shiver_align_contigs.sh /data_tmp/ShiverInitDir /data_tmp/config.sh /data_tmp/Contigs.fasta $Prefix 2>&1 | tee -a $LOGFILE
+    echo "\n========== stop shiver_align_contigs.sh ==========\n" 2>&1 | tee -a $LOGFILE
     cp /data_tmp/${Prefix}* /data/.
 }
 
 function shiver_map_reads {
-    echo "\n========== start shiver_map_reads.sh ==========\n"
-    mkdir /data_tmp/tmp
+    echo "\n========== start shiver_map_reads.sh ==========\n" 2>&1 | tee -a $LOGFILE
+    refseqfile="/data/${Prefix}_cut_wRefs.fasta"
+    if [ -f "$refseqfile" ]; then
+        echo "cut_wRefs file was generated by Shiver, using ${Prefix}_cut_wRefs.fasta" 2>&1 | tee -a $LOGFILE
+    else
+        echo "cut_wRefs file was not  generated by Shiver, using ${Prefix}_raw_wRefs.fasta as ${Prefix}_cut_wRefs.fasta" 2>&1 | tee -a $LOGFILE
+        cp /data/${Prefix}_raw_wRefs.fasta /data/${Prefix}_cut_wRefs.fasta 2>&1 | tee -a $LOGFILE
+    fi
+    mkdir /data_tmp/tmp 2>&1 | tee -a $LOGFILE
     cd /data_tmp
     # reads_1.fastq
     if [[ /data/$ForwardReads == *.gz ]]
     then
-        cp /data/$ForwardReads /data_tmp/reads_1.fastq.gz
-        gunzip reads_1.fastq.gz
+        cp /data/$ForwardReads /data_tmp/reads_1.fastq.gz 2>&1 | tee -a $LOGFILE
+        gunzip reads_1.fastq.gz 2>&1 | tee -a $LOGFILE
     else
-        cp /data/$ForwardReads /data_tmp/reads_1.fastq
+        cp /data/$ForwardReads /data_tmp/reads_1.fastq 2>&1 | tee -a $LOGFILE
     fi
-    awk '{if (NR%4 == 1) {print $1 "/1"} else print}' /data_tmp/reads_1.fastq > /data_tmp/reads_1.fastq_tmp
-    rm /data_tmp/reads_1.fastq
-    mv /data_tmp/reads_1.fastq_tmp /data_tmp/tmp/reads_1_tmp.fastq
+    awk '{if (NR%4 == 1) {print $1 "/1"} else print}' /data_tmp/reads_1.fastq > /data_tmp/reads_1.fastq_tmp 2>&1 | tee -a $LOGFILE
+    rm /data_tmp/reads_1.fastq 2>&1 | tee -a $LOGFILE
+    mv /data_tmp/reads_1.fastq_tmp /data_tmp/tmp/reads_1_tmp.fastq 2>&1 | tee -a $LOGFILE
     # reads_2.fastq
     if [[ /data/$ReverseReads == *.gz ]]
     then
-        cp /data/$ReverseReads /data_tmp/reads_2.fastq.gz
-        gunzip reads_2.fastq.gz
+        cp /data/$ReverseReads /data_tmp/reads_2.fastq.gz 2>&1 | tee -a $LOGFILE
+        gunzip reads_2.fastq.gz 2>&1 | tee -a $LOGFILE
     else
-        cp /data/$ReverseReads /data_tmp/reads_2.fastq
+        cp /data/$ReverseReads /data_tmp/reads_2.fastq 2>&1 | tee -a $LOGFILE
     fi
-    awk '{if (NR%4 == 1) {print $1 "/2"} else print}' /data_tmp/reads_2.fastq > /data_tmp/reads_2.fastq_tmp
-    rm /data_tmp/reads_2.fastq
-    mv /data_tmp/reads_2.fastq_tmp /data_tmp/tmp/reads_2_tmp.fastq
+    awk '{if (NR%4 == 1) {print $1 "/2"} else print}' /data_tmp/reads_2.fastq > /data_tmp/reads_2.fastq_tmp 2>&1 | tee -a $LOGFILE
+    rm /data_tmp/reads_2.fastq 2>&1 | tee -a $LOGFILE
+    mv /data_tmp/reads_2.fastq_tmp /data_tmp/tmp/reads_2_tmp.fastq 2>&1 | tee -a $LOGFILE
     # Contigs.fasta
-    if [ -f /data/${Prefix}_DeNovoContigs.fasta ]; then echo ""; else echo "error: file not found ${Prefix}_DeNovoContigs.fasta"; exit 3; fi
-    cp /data/${Prefix}_DeNovoContigs.fasta /data_tmp/${Prefix}_DeNovoContigs.fasta
+    if [ -f /data/${Prefix}_DeNovoContigs.fasta ]; then echo ""; else echo "error: file not found ${Prefix}_DeNovoContigs.fasta" 2>&1 | tee -a $LOGFILE; exit 3; fi
+    cp /data/${Prefix}_DeNovoContigs.fasta /data_tmp/${Prefix}_DeNovoContigs.fasta 2>&1 | tee -a $LOGFILE
     # SID.blast
-    if [ -f /data/${Prefix}.blast ]; then echo ""; else echo "error: file not found ${Prefix}.blast"; exit 3; fi
-    cp /data/${Prefix}.blast /data_tmp/${Prefix}.blast
+    if [ -f /data/${Prefix}.blast ]; then echo ""; else echo "error: file not found ${Prefix}.blast" 2>&1 | tee -a $LOGFILE; exit 3; fi
+    cp /data/${Prefix}.blast /data_tmp/${Prefix}.blast 2>&1 | tee -a $LOGFILE
     # SID.blast
-    if [ -f /data/${Prefix}_cut_wRefs.fasta ]; then echo ""; else echo "error: file not found ${Prefix}_cut_wRefs.fasta"; exit 3; fi
-    cp /data/${Prefix}_cut_wRefs.fasta /data_tmp/${Prefix}_cut_wRefs.fasta
+    if [ -f /data/${Prefix}_cut_wRefs.fasta ]; then echo ""; else echo "error: file not found ${Prefix}_cut_wRefs.fasta" 2>&1 | tee -a $LOGFILE; exit 3; fi
+    cp /data/${Prefix}_cut_wRefs.fasta /data_tmp/${Prefix}_cut_wRefs.fasta 2>&1 | tee -a $LOGFILE
 
-    bash /shiver/shiver_map_reads.sh /data_tmp/ShiverInitDir /data_tmp/config.sh /data_tmp/${Prefix}_DeNovoContigs.fasta $Prefix /data_tmp/${Prefix}.blast /data_tmp/${Prefix}_cut_wRefs.fasta /data_tmp/tmp/reads_1_tmp.fastq /data_tmp/tmp/reads_2_tmp.fastq
-    echo "\n========== stop shiver_map_reads.sh ==========\n"
-    cp /data_tmp/${Prefix}* /data/.
+    bash /shiver/shiver_map_reads.sh /data_tmp/ShiverInitDir /data_tmp/config.sh /data_tmp/${Prefix}_DeNovoContigs.fasta $Prefix /data_tmp/${Prefix}.blast /data_tmp/${Prefix}_cut_wRefs.fasta /data_tmp/tmp/reads_1_tmp.fastq /data_tmp/tmp/reads_2_tmp.fastq 2>&1 | tee -a $LOGFILE
+    echo "\n========== stop shiver_map_reads.sh ==========\n" 2>&1 | tee -a $LOGFILE
+    cp /data_tmp/${Prefix}* /data/. 2>&1 | tee -a $LOGFILE
 }
 
 function run_drug_resistance {
-    /usr/bin/python3 /shiver/drug_res.py "/data/${Prefix}_ref.fasta" "/data/${Prefix}_drug_resistance.xlsx"
-}
+    echo "\n========== start drug_res.py ==========\n" 2>&1 | tee -a $LOGFILE
+    /usr/bin/python3 /shiver/drug_res.py "/data/${Prefix}_ref.fasta" "/data/${Prefix}_drug_resistance.xlsx" 2>&1 | tee -a $LOGFILE
+    echo "\n========== stop drug_res.py ==========\n" 2>&1 | tee -a $LOGFILE
 
-function usage {
-    echo ""
 }
 
 POSITIONAL=()
@@ -169,7 +194,7 @@ while [[ $# -gt 0 ]]; do
 		;;
 	--ref-alignment)
 		RefAlignment="$2"
-		shiftNoDockerBuild
+		shift
 		shift
 		;;
 	--adapters)
@@ -197,10 +222,6 @@ while [[ $# -gt 0 ]]; do
 		shift
 		shift
 		;;
-	--no-docker-build)
-		NoDockerBuild=yes
-		shift
-		;;
 	-h|--help)
         usage
 		exit 0
@@ -213,9 +234,6 @@ while [[ $# -gt 0 ]]; do
 done
 set -- "${POSITIONAL[@]}"
 
-# post process parameters
-NoDockerBuild=${NoDockerBuild:-no}
-
 case $1 in
 help)
     usage
@@ -226,44 +244,121 @@ shell|bash)
     exit 0
     ;;
 gen_config)
-    cp /shiver/shiver_pipeline.conf /data/shiver_pipeline.conf
+    cp /shiver/pipeline.conf /data/pipeline.conf
+    cp /shiver/config.sh /data/config.sh
     # TUDO: make shiver config as well
     exit 0
     ;;
 de_novo_assembly)
+    touch $LOGFILE
+    echo "================================================================================" >> $LOGFILE
+    echo "========== Shiver Docker Pipeline ==============================================" >> $LOGFILE
+    echo "========== Start denovo assembly step ==========================================" >> $LOGFILE
+    echo "================================================================================" >> $LOGFILE
+    echo "\n\n\n" >> $LOGFILE
+    echo "=========== Pipeline config: pipeline.conf =====================================" >> $LOGFILE
+    echo /shiver/pipeline.conf >> $LOGFILE
+    echo "\n" >> $LOGFILE
+    echo "================================================================================" >> $LOGFILE
+    echo "\n\n\n" >> $LOGFILE
+    echo "=========== Shiver config: config.sh ===========================================" >> $LOGFILE
+    echo /shiver/config.sh >> $LOGFILE
+    echo "\n" >> $LOGFILE
+    echo "================================================================================" >> $LOGFILE
     de_novo_assembly
-    exit 0
-    ;;
-init)
-    shiver_init
+    echo "========== DONE ================================================================" >> $LOGFILE
     exit 0
     ;;
 align_contigs)
+    touch $LOGFILE
+    echo "================================================================================" >> $LOGFILE
+    echo "========== Shiver Docker Pipeline ==============================================" >> $LOGFILE
+    echo "========== Start align contigs step ============================================" >> $LOGFILE
+    echo "================================================================================" >> $LOGFILE
+    echo "\n\n\n" >> $LOGFILE
+    echo "=========== Pipeline config: pipeline.conf =====================================" >> $LOGFILE
+    echo /shiver/pipeline.conf >> $LOGFILE
+    echo "\n" >> $LOGFILE
+    echo "================================================================================" >> $LOGFILE
+    echo "\n\n\n" >> $LOGFILE
+    echo "=========== Shiver config: config.sh ===========================================" >> $LOGFILE
+    echo /shiver/config.sh >> $LOGFILE
+    echo "\n" >> $LOGFILE
+    echo "================================================================================" >> $LOGFILE
     shiver_init
     shiver_align_contigs
+    echo "========== DONE ================================================================" >> $LOGFILE
     exit 0
     ;;
-skip_consensus_check)
-    # TUDO: if SID_cut_wRefs.fasta exsist do NOT overwrite
-    cp /data/${Prefix}_raw_wRefs.fasta /data/${Prefix}_cut_wRefs.fasta
-    ;;
 map_reads)
+    touch $LOGFILE
+    echo "================================================================================" >> $LOGFILE
+    echo "========== Shiver Docker Pipeline ==============================================" >> $LOGFILE
+    echo "========== Start map reads step ================================================" >> $LOGFILE
+    echo "================================================================================" >> $LOGFILE
+    echo "\n\n\n" >> $LOGFILE
+    echo "=========== Pipeline config: pipeline.conf =====================================" >> $LOGFILE
+    echo /shiver/pipeline.conf >> $LOGFILE
+    echo "\n" >> $LOGFILE
+    echo "================================================================================" >> $LOGFILE
+    echo "\n\n\n" >> $LOGFILE
+    echo "=========== Shiver config: config.sh ===========================================" >> $LOGFILE
+    echo /shiver/config.sh >> $LOGFILE
+    echo "\n" >> $LOGFILE
+    echo "================================================================================" >> $LOGFILE
     shiver_init
     shiver_map_reads
+    echo "========== DONE ================================================================" >> $LOGFILE
     exit 0
     ;;
 drug_resistance)
+    touch $LOGFILE
+    echo "================================================================================" >> $LOGFILE
+    echo "========== Shiver Docker Pipeline ==============================================" >> $LOGFILE
+    echo "========== Start drug resistence step ==========================================" >> $LOGFILE
+    echo "================================================================================" >> $LOGFILE
+    echo "\n\n\n" >> $LOGFILE
+    echo "=========== Pipeline config: pipeline.conf =====================================" >> $LOGFILE
+    echo /shiver/pipeline.conf >> $LOGFILE
+    echo "\n" >> $LOGFILE
+    echo "================================================================================" >> $LOGFILE
+    echo "\n\n\n" >> $LOGFILE
+    echo "=========== Shiver config: config.sh ===========================================" >> $LOGFILE
+    echo /shiver/config.sh >> $LOGFILE
+    echo "\n" >> $LOGFILE
+    echo "================================================================================" >> $LOGFILE
     run_drug_resistance
     exit 0
     ;;
 full)
+    touch $LOGFILE
+    echo "================================================================================" >> $LOGFILE
+    echo "========== Shiver Docker Pipeline ==============================================" >> $LOGFILE
+    echo "========== Start full pipeline =================================================" >> $LOGFILE
+    echo "================================================================================" >> $LOGFILE
+    echo "\n\n\n" >> $LOGFILE
+    echo "=========== Pipeline config: pipeline.conf =====================================" >> $LOGFILE
+    echo /shiver/pipeline.conf >> $LOGFILE
+    echo "\n" >> $LOGFILE
+    echo "================================================================================" >> $LOGFILE
+    echo "\n\n\n" >> $LOGFILE
+    echo "=========== Shiver config: config.sh ===========================================" >> $LOGFILE
+    echo /shiver/config.sh >> $LOGFILE
+    echo "\n" >> $LOGFILE
+    echo "================================================================================" >> $LOGFILE
     de_novo_assembly
     shiver_init
     shiver_align_contigs
-    # TUDO: if SID_cut_wRefs.fasta exsist do NOT overwrite
-    cp /data/${Prefix}_raw_wRefs.fasta /data/${Prefix}_cut_wRefs.fasta
+    refseqfile="/data/${Prefix}_cut_wRefs.fasta"
+    if [ -f "$refseqfile" ]; then
+        echo "cut_wRefs file was generated by Shiver, using ${Prefix}_cut_wRefs.fasta" 2>&1 | tee -a $LOGFILE
+    else
+        echo "cut_wRefs file was not  generated by Shiver, using ${Prefix}_raw_wRefs.fasta as ${Prefix}_cut_wRefs.fasta" 2>&1 | tee -a $LOGFILE
+        cp /data/${Prefix}_raw_wRefs.fasta /data/${Prefix}_cut_wRefs.fasta 2>&1 | tee -a $LOGFILE
+    fi
     shiver_map_reads
     run_drug_resistance
+    echo "========== DONE ================================================================" >> $LOGFILE
     exit 0
     ;;
 *)

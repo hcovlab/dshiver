@@ -3,7 +3,8 @@ FROM ubuntu:16.04
 RUN apt-get update && \
     apt-get install -y build-essential curl python3 python3-dev \
     python3-setuptools git zip unzip wget tar bzip2 zlib1g-dev libbz2-dev bc \
-    liblzma-dev default-jre dh-autoreconf ruby
+    liblzma-dev default-jre dh-autoreconf ruby && \
+    rm -rf /var/lib/apt/lists/*
 
 RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3 && \
     pip3 install --upgrade pip && \
@@ -90,9 +91,6 @@ RUN cd ~ && \
     cd ~ && rm -rf mummer
 
 RUN pip3 install iva
-
-RUN cd ~ && \
-    rm -rf .cache $$ rm -rf .wget-hsts
 
 COPY . /shiver
 RUN chmod +x /shiver/pipeline.sh && \
