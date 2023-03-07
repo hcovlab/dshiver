@@ -1,4 +1,4 @@
-FROM ubuntu:16.04
+FROM ubuntu:22.04
 
 RUN apt-get update && \
     apt-get install -y build-essential curl python3 python3-dev \
@@ -26,13 +26,13 @@ RUN cd ~ && \
     cd ~ && rm -rf samtools-1.6 && rm -rf samtools-1.6.tar.bz2
 
 RUN cd ~ && \
-    wget https://mafft.cbrc.jp/alignment/software/mafft-7.313-without-extensions-src.tgz && \
-    tar -xzf mafft-7.313-without-extensions-src.tgz && \
-    cd mafft-7.313-without-extensions/core/ && \
+    wget https://mafft.cbrc.jp/alignment/software/mafft-7.505-without-extensions-src.tgz && \
+    tar -xzf mafft-7.505-without-extensions-src.tgz && \
+    cd mafft-7.505-without-extensions/core/ && \
     make clean && \
     make && \
     make install && \
-    cd ~ && rm -rf mafft-7.313-without-extensions-src.tgz && rm -rf mafft-7.313-without-extensions
+    cd ~ && rm -rf mafft-7.505-without-extensions-src.tgz && rm -rf mafft-7.505-without-extensions
 
 RUN cd ~ && \
     wget http://www.usadellab.org/cms/uploads/supplementary/Trimmomatic/Trimmomatic-0.36.zip && \
@@ -57,7 +57,6 @@ RUN cd ~ && \
 RUN cd ~ && \
     git clone https://github.com/lh3/bwa.git && \
     cd bwa && \
-    git checkout v0.7.17 && \
     make && \
     cp bwa /usr/bin/. && \
     cd ~ && rm -rf bwa
