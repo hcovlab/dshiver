@@ -69,7 +69,7 @@ RUN cd ~ && \
     cd ~ && rm -rf bowtie2-2.3.3.1-linux-x86_64 && rm -rf bowtie2.zip
 
 RUN cd ~ && \
-    git clone https://github.com/refresh-bio/KMC.git && \
+    git clone --recurse-submodules https://github.com/refresh-bio/KMC.git && \
     cd KMC && \
     make && \
     cp bin/* /usr/bin/ && \
