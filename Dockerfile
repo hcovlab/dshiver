@@ -3,7 +3,7 @@ FROM ubuntu:22.04
 RUN apt-get update && \
     apt-get install -y build-essential curl python3 python3-dev \
     python3-setuptools git zip unzip wget tar bzip2 zlib1g-dev libbz2-dev bc \
-    liblzma-dev default-jre dh-autoreconf ruby && \
+    liblzma-dev default-jre dh-autoreconf ruby libidn11-dev && \
     rm -rf /var/lib/apt/lists/*
 
 RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3 && \
