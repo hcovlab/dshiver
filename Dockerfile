@@ -11,10 +11,10 @@ RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3 && \
     pip3 install pyfastaq biopython xlsxwriter requests
 
 RUN cd ~ && \
-    wget ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/2.7.1/ncbi-blast-2.7.1+-x64-linux.tar.gz && \
-    tar -xzf ncbi-blast-2.7.1+-x64-linux.tar.gz && \
-    cp ncbi-blast-2.7.1+/bin/* /usr/bin/ && \
-    cd ~ && rm -rf ncbi-blast-2.7.1+ && rm -rf ncbi-blast-2.7.1+-x64-linux.tar.gz
+    wget https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.13.0+-x64-linux.tar.gz && \
+    tar -xzf ncbi-blast-2.13.0+-x64-linux.tar.gz && \
+    cp ncbi-blast-2.13.0+/bin/* /usr/bin/ && \
+    cd ~ && rm -rf ncbi-blast-2.13.0+ && rm -rf ncbi-blast-2.13.0+-x64-linux.tar.gz
 
 RUN cd ~ && \
     wget https://github.com/samtools/samtools/releases/download/1.6/samtools-1.6.tar.bz2 && \
