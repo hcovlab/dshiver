@@ -8,14 +8,14 @@ then
     printf "Pipeline config file found, using the given one\n"
     source /data/pipeline.conf
 else
-    printf "Pipeline config does not file found, using the default one\n"
+    printf "Pipeline config file is not found, using the default one\n"
     source /shiver/pipeline.conf
 fi
 
 # copy shiver config:
  if [ -z ${ShiverConfig+x} ]
  then
-    printf "Shiver config does not file found, using the default one\n"
+    printf "Shiver config file is not found, using the default one\n"
     SIVERCONFIGPATH="/shiver/config.sh"
 else
     printf "Shiver config file found, using the given one\n"
@@ -80,7 +80,7 @@ function de_novo_assembly {
         cp /data/$ReverseReads /data_tmp/reads_2.fastq 2>&1 | tee -a $LOGFILE
         gzip /data_tmp/reads_2.fastq 2>&1 | tee -a $LOGFILE
     fi
-    iva -vv -f reads_1.fastq.gz -r reads_2.fastq.gz /data_tmp/IVAout 2>&1 | tee -a $LOGFILE
+    iva -vv --seed_stop_length 400 -f reads_1.fastq.gz -r reads_2.fastq.gz /data_tmp/IVAout 2>&1 | tee -a $LOGFILE
     cp /data_tmp/IVAout/contigs.fasta /data/${Prefix}_DeNovoContigs.fasta 2>&1 | tee -a $LOGFILE
     printf "\n========== iva finished ==========\n" 2>&1 | tee -a $LOGFILE
 }

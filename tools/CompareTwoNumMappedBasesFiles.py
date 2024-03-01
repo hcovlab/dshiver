@@ -36,7 +36,7 @@ args = parser.parse_args()
 def ReadFromFile(MyFile):
   with open(MyFile, 'r') as f:
     for LineNumberMin1, line in enumerate(f):
-      values = line.split(',')
+      values = line.strip().split(',')  # Modified here, added strip()
       if LineNumberMin1 == 0:
         AllValues = [values]
       else:
@@ -57,7 +57,7 @@ if [value[0] for value in file1values] != [value[0] for value in file2values]:
   '. Quitting.', file=sys.stderr)
   exit(1)
 
-print(','.join(file1values[0]).rstrip())
+print(','.join(file1values[0]))
 for i in range(1,len(file1values)):
   IdentityThreshold, count1 = file1values[i]
   IdentityThreshold, count2 = file2values[i]
@@ -69,5 +69,3 @@ for i in range(1,len(file1values)):
   else:
     PercentageIncrease = (count2 - count1) * 100. / count1
   print(IdentityThreshold, PercentageIncrease, sep=',')
-
-

@@ -106,22 +106,26 @@ echo 'PATH=$PATH:~/bowtie2-2.3.3.1-linux-x86_64/' >> ~/.bashrc; source ~/.bashrc
 xcode-select --install
 
 # home brew: 
-/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-# python3 (for pip3)
+# Newer MacOS versions do not contain python2, which shiver requires.
+# It can be installed from here: https://www.python.org/downloads/release/python-2718/
+
+# My MacOS had python3 installed already (at least after installing xcode) so the command
+# below was unnessecary 
 brew install python3
 
 # fastaq
 pip3 install pyfastaq
 
-# python (for pip)
-brew install python
+# biopython needs to be installed into your python2.
+# version 1.76 is the latest version for which that was supported.
+python2 -m pip install biopython==1.76
 
-# biopython
-pip install biopython
-
-# smalt
+# smalt: one of the two commands below might work...
 brew install smalt
+brew install brewsci/bio/smalt
+# ...if not, see installation instructions at https://www.sanger.ac.uk/tool/smalt-0/
 
 # blast
 brew install blast

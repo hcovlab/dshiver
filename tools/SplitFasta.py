@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-from __future__ import print_function
 
 ## Author: Chris Wymant, chris.wymant@bdi.ox.ac.uk
 ## Acknowledgement: I wrote this while funded by ERC Advanced Grant PBDR-339251
@@ -51,31 +50,25 @@ for seq in SeqIO.parse(open(args.FastaFile),'fasta'):
   # does not already exist.
   FilenameSafeID = ''.join(char for char in seq.id if char in FilenameSafeChars)
   if FilenameSafeID == '':
-    print('Sequence name', seq.id, 'in', args.FastaFile, 'containins no',
-    'filename-safe characters. Quitting.', file=sys.stderr)
-    exit(1)
+    sys.stderr.write('Sequence name {} in {} contains no filename-safe characters. Quitting.\n'.format(seq.id, args.FastaFile))
+    sys.exit(1)
   if FilenameSafeID in SeqDict:
-    print('Sequence names', SeqDict[FilenameSafeID].id, 'and', seq.id, 'are',
-    'identical after removing filename-unsafe characters. Please rename and', \
-    'try again. Quitting.', file=sys.stderr)
-    exit(1)
+    sys.stderr.write('Sequence names {} and {} are identical after removing filename-unsafe characters. Please rename and try again. Quitting.\n'.format(SeqDict[FilenameSafeID].id, seq.id))
+    sys.exit(1)
   if os.path.isfile(FilenameFromSeqID(FilenameSafeID)):
-    print('The filename-safe version of', seq.id, 'is', FilenameSafeID + \
-    ', but', FilenameFromSeqID(FilenameSafeID), 'already exists. We will not', \
-    'overwrite it: please rename, move or delete it and try again. Quitting.', \
-    file=sys.stderr)
-    exit(1)
+    sys.stderr.write('The filename-safe version of {} is {}, but {} already exists. We will not overwrite it: please rename, move or delete it and try again. Quitting.\n'.format(seq.id, FilenameSafeID, FilenameFromSeqID(FilenameSafeID)))
+    sys.exit(1)
 
   # Gap strip if desired.
   if args.gap_strip:
-    seq.seq = seq.seq.ungap("-")
+    seq.seq = seq.seq.replace("-","")
 
   SeqDict[FilenameSafeID] = seq
 
 # Check at least one seq was found.
-if SeqDict == {}:
-  print('No sequences found in', args.FastaFile+'. Quitting.', file=sys.stderr)
-  exit(1)
+if not SeqDict:
+  sys.stderr.write('No sequences found in {}. Quitting.\n'.format(args.FastaFile))
+  sys.exit(1)
 
 # Write the files.
 for FilenameSafeID, seq in SeqDict.items():

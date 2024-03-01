@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-from __future__ import print_function
 
 ## Author: Chris Wymant, chris.wymant@bdi.ox.ac.uk
 ## Acknowledgement: I wrote this while funded by ERC Advanced Grant PBDR-339251
@@ -56,12 +55,10 @@ assume there is no header line (as is the case in blast output).''')
 args = parser.parse_args()
 
 if args.sort_field > args.num_fields:
-  print("Error: sort_field cannot be larger than num_fields. Quitting.",
-  file=sys.stderr)
+  print("Error: sort_field cannot be larger than num_fields. Quitting.", file=sys.stderr) 
   exit(1)
 if args.id_field > args.num_fields:
-  print("Error: id_field cannot be larger than num_fields. Quitting.",
-  file=sys.stderr)
+  print("Error: id_field cannot be larger than num_fields. Quitting.", file=sys.stderr) 
   exit(1)
 
 rows_to_keep = OrderedDict()
@@ -74,7 +71,7 @@ with open(args.in_file, 'r') as f:
       continue
 
     # Split into fields.
-    fields = line.split(args.separator)
+    fields = line.strip().split(args.separator)
     assert len(fields) == args.num_fields, \
     "Error: expected {n} fields in data file; found {m}.".format(\
     n=args.num_fields, m=len(fields))
@@ -85,7 +82,7 @@ with open(args.in_file, 'r') as f:
     except ValueError:
       print("Error: could not understand value", fields[args.sort_field - 1],
       "in field", args.sort_field, "on line", lin_num_min_1 + 1, "in",
-      args.in_file, "as a float. Quitting.", file=sys.stderr)
+      args.in_file, "as a float. Quitting.", file=sys.stderr) 
       exit(1)
 
     id_ = fields[args.id_field - 1]
@@ -102,19 +99,12 @@ with open(args.in_file, 'r') as f:
     else:
       rows_to_keep[id_] = (line, sort_value)
 
-# Exit if empty.
-if len(rows_to_keep) == 0:
-  print("Found no data in", args.in_file + ". Quitting.", file=sys.stderr)
-  exit(1)
-
 with open(args.out_file, "w") as f:
   if args.header:
     f.write(header)
   if args.order_by_id:
-    for value in sorted(rows_to_keep.values(),
-    key=lambda x: x[0].split(",", 1)[0]):
+    for value in sorted(rows_to_keep.values(), key=lambda x: x[0].split(args.separator, 1)[0]):
       f.write(value[0])
   else:
     for value in rows_to_keep.values():
       f.write(value[0])
-

@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-from __future__ import print_function
+from Bio import SeqIO
+from Bio import Seq
+from AuxiliaryFunctions import PropagateNoCoverageChar, IUPACdict
+import argparse
+import os
+import sys
 
 ## Author: Chris Wymant, chris.wymant@bdi.ox.ac.uk
 ## Acknowledgement: I wrote this while funded by ERC Advanced Grant PBDR-339251
@@ -13,15 +18,7 @@ consensus: where the consensus has '?' or 'N' we use the reference base; where
 the consensus has an ambiguity code we take the first (in alphabetical order) of
 the bases A, C, G or T that that code represents; otherwise, we use the base (or
 gap) of the consensus. Output is printed to stdout suitable for redirection to a
-fasta file.'''
-
-import argparse
-import os
-import sys
-from Bio import SeqIO
-from Bio import Seq
-import itertools
-from AuxiliaryFunctions import PropagateNoCoverageChar, IUPACdict
+fasta file.''' 
 
 # Define a function to check files exist, as a type for the argparse.
 def File(MyFile):
@@ -47,20 +44,17 @@ for seq in SeqIO.parse(open(args.ConsensusWithRef),'fasta'):
     ref = seq
     RefFound = True
     continue
-  print('Found three sequences in', args.ConsensusWithRef+\
-  '; expected only two. Quitting.', file=sys.stderr)
+  print('Found three sequences in', args.ConsensusWithRef + '; expected only two. Quitting.', file=sys.stderr)
   exit(1)
 if not RefFound:
-  print('Less than two sequences found in', args.ConsensusWithRef+\
-  '; expected two. Quitting.', file=sys.stderr)
+  print('Less than two sequences found in', args.ConsensusWithRef + '; expected two. Quitting.', file=sys.stderr)
   exit(1)
 
 # Check the consensus and its ref are aligned with no pure-gap columns.
 ConsensusAsString = str(consensus.seq).upper()
 RefAsString = str(ref.seq).upper()
 if len(ConsensusAsString) != len(RefAsString):
-  print(args.ConsensusWithRef, 'is not an alignment - seq lengths', \
-  'differ. Quitting.', file=sys.stderr)
+  print(args.ConsensusWithRef, 'is not an alignment - seq lengths differ. Quitting.', file=sys.stderr)
   exit(1)
 
 # The main bit.
@@ -74,15 +68,13 @@ for ConsensusBase, RefBase in zip(ConsensusAsString, RefAsString):
   elif ConsensusBase in IUPACdict:
     NewConsensus += IUPACdict[ConsensusBase][0]
   else:
-    print('Encountered unexpected base', ConsensusBase, 'in', \
-    args.ConsensusWithRef + '. Quitting.', file=sys.stderr)
+    print('Encountered unexpected base', ConsensusBase, 'in', args.ConsensusWithRef + '. Quitting.', file=sys.stderr)
     exit(1)
 
 # Ungap, and rename if desired.
-consensus.seq = Seq.Seq(NewConsensus).ungap('-')
-if args.output_seq_name != None:
+consensus.seq = Seq.Seq(NewConsensus).replace('-','')
+if args.output_seq_name is not None:
   consensus.id = args.output_seq_name
 consensus.description = ''
 
 SeqIO.write(consensus, sys.stdout, "fasta")
-

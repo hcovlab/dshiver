@@ -19,7 +19,6 @@ import sys
 import re
 from Bio import AlignIO
 import numpy as np
-import collections
 
 # Define a function to check files exist, as a type for the argparse.
 def File(MyFile):
@@ -58,7 +57,7 @@ def GetSeqStartAndEndPos(seq):
       FirstBasePos += 1
   except IndexError:
     print('Encountered pure-gap sequence. Quitting', file=sys.stderr)
-    quit(1)
+    exit(1)
   LastBasePos = len(seq) - 1
   while not seq[LastBasePos]:
     LastBasePos -= 1
@@ -68,10 +67,10 @@ start1, end1 = GetSeqStartAndEndPos(seqs[0])
 start2, end2 = GetSeqStartAndEndPos(seqs[1])
 
 ExtraAtEndsFor1 = 0
-ExtraAtEndsFor1 += sum(IsNotGap for IsNotGap in seqs[0][start1:start2] if IsNotGap)
-ExtraAtEndsFor1 -= sum(IsNotGap for IsNotGap in seqs[0][start2:start1] if IsNotGap)
-ExtraAtEndsFor1 += sum(IsNotGap for IsNotGap in seqs[0][end2:end1] if IsNotGap)
-ExtraAtEndsFor1 -= sum(IsNotGap for IsNotGap in seqs[0][end1:end2] if IsNotGap)
+ExtraAtEndsFor1 += np.sum([IsNotGap for IsNotGap in seqs[0][start1:start2] if IsNotGap])
+ExtraAtEndsFor1 -= np.sum([IsNotGap for IsNotGap in seqs[0][start2:start1] if IsNotGap])
+ExtraAtEndsFor1 += np.sum([IsNotGap for IsNotGap in seqs[0][end2:end1] if IsNotGap])
+ExtraAtEndsFor1 -= np.sum([IsNotGap for IsNotGap in seqs[0][end1:end2] if IsNotGap])
 
 ExtraInMiddleFor1 = 0
 for pos in range(max(start1, start2), min(end1, end2)):
@@ -80,4 +79,3 @@ for pos in range(max(start1, start2), min(end1, end2)):
   ExtraInMiddleFor1 += int(Seq1isNotGap) - int(Seq2isNotGap)
 
 print(ExtraAtEndsFor1, ExtraInMiddleFor1)
-

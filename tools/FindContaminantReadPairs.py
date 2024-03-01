@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-from __future__ import print_function
 #
 ## Author: Chris Wymant, chris.wymant@bdi.ox.ac.uk
 ## Acknowledgement: I wrote this while funded by ERC Advanced Grant PBDR-339251
@@ -17,7 +16,6 @@ from __future__ import print_function
 ## novo assembly has been done with these reads, some of the resulting contigs
 ## may be identified as contamination -- we want to find the reads that
 ## correspond to those contigs, in order to remove them.)
-
 
 ################################################################################
 # USER INPUT
@@ -107,7 +105,7 @@ for ReadName, [read1Hit, read1Evalue] in HitsFor1reads.items():
       ContaminantEvalue = read2Evalue
     else:
       ContaminantEvalue = read1Evalue
-      RefEvalue         = read2Evalue
+      RefEvalue         = read2Evalue    
     if ContaminantEvalue < RefEvalue:
       ContaminantReadPairs.append(ReadName)
   else:
@@ -116,16 +114,19 @@ for ReadName, [read1Hit, read1Evalue] in HitsFor1reads.items():
 # Write the output
 OutFile_1reads = OutFileBasename+'_1.txt'
 OutFile_2reads = OutFileBasename+'_2.txt'
+HaveSomeReads = len(ContaminantReadPairs) > 0
 with open(OutFile_1reads, 'w') as f:
-  f.write('\n'.join([ReadName+'/1' for ReadName in ContaminantReadPairs]))
+  if HaveSomeReads:
+    f.write('\n'.join([ReadName+'/1' for ReadName in ContaminantReadPairs]) + "\n")
 with open(OutFile_2reads, 'w') as f:
-  f.write('\n'.join([ReadName+'/2' for ReadName in ContaminantReadPairs]))
+  if HaveSomeReads:
+    f.write('\n'.join([ReadName+'/2' for ReadName in ContaminantReadPairs]) + "\n")
 
 # Antiquated code, from when non-contaminant read pairs were printed:
 '''
 ## NB we discard pairs where one read blasted to the reference and the other
 ## did not blast to anything. Our reasons are two-fold. 1) Keeping such 'pairs'
-## would involve making the assumption that the read missing from the blast
+## would involve making the assumption that the read missing from the blast 
 ## table really exists; it might not. 2) Though we do keep reads where
 ## one read hits the reference and the other hits a contaminant (if the
 ## contaminant hit is not as good as the reference hit), it's not inconsistent
@@ -162,7 +163,7 @@ for ReadName, [read1Hit, read1Evalue] in HitsFor1reads.items():
       ContaminantEvalue = read2Evalue
     else:
       ContaminantEvalue = read1Evalue
-      RefEvalue         = read2Evalue
+      RefEvalue         = read2Evalue    
     if RefEvalue <= ContaminantEvalue:
       GoodReadPairs.append(ReadName)
 

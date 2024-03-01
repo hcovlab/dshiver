@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
-
-from __future__ import print_function
+from Bio import AlignIO
+import argparse
+import itertools
+import os
+import sys
 
 ## Author: Chris Wymant, chris.wymant@bdi.ox.ac.uk
 ## Acknowledgement: I wrote this while funded by ERC Advanced Grant PBDR-339251
@@ -28,12 +31,6 @@ for one or both samples, this script is likely to be better, because an
 alignment of the references instead of the consensuses does not suffer from the
 ambiguity due to missing sequence. Output of this script is printed to stdout
 suitable for redirection to a csv file.'''
-
-import argparse
-import os
-import sys
-from Bio import AlignIO
-import itertools
 
 # Define a function to check files exist, as a type for the argparse.
 def File(MyFile):
@@ -145,7 +142,7 @@ def GetFreqs(BaseFreqsFile, RefSeq):
         continue
       fields = line.split(',')
       RefPos = fields[0]
-      if RefPos == 'NA':
+      if RefPos == 'NA':  
         continue
       RefPos = int(RefPos)
       if RefPos != LastRefPos + 1:
@@ -158,7 +155,7 @@ def GetFreqs(BaseFreqsFile, RefSeq):
         ':', RefBase, 'in', BaseFreqsFile, 'but', GaplessRefSeq[RefPos-1],
         'in', args.alignment + '. Quitting.', file=sys.stderr)
         quit(1)
-      freqs = map(int, fields[2:])
+      freqs = list(map(int, fields[2:]))
       assert len(freqs) == 6
       FreqsInRef.append(freqs)
       LastRefPos += 1
@@ -175,7 +172,7 @@ def GetFreqs(BaseFreqsFile, RefSeq):
     elif base == '-':
       # If the ref hasn't started yet, all base counts equal zero; if this is a
       # gap inside the ref, reproduce the base counts from the last position.
-      # This is just to facilitate the coverage calculation, for which we take
+      # This is just to facilitate the coverage calculation, for which we take 
       # the coverage (sum of counts) here to be equal to its last value before
       # the deletion, but we won't report the breakdown into different bases.
       freqs = LastPosFreqs
@@ -212,17 +209,16 @@ if args.compare_simple:
 if args.compare:
   outstring += ',base frequency similarity score'
 
-
-
 NumPosWithHigherCovIn1 = 0
 NumPosWithHigherCovIn2 = 0
 
 # Record each row of the csv file
-for PosMin1, (ref1freqs, ref2freqs) in enumerate(zip(ref1freqs,ref2freqs)):
+for PosMin1, (ref1freqs, ref2freqs) in enumerate(itertools.zip(ref1freqs,
+ref2freqs)):
   PosInRef1 = ref1PosConversions[PosMin1]
   PosInRef2 = ref2PosConversions[PosMin1]
   outstring += '\n' + str(PosMin1+1) + ',' + str(PosInRef1) + ',' + \
-  str(PosInRef2)
+  str(PosInRef2) 
 
   if args.coverage_only:
     ref1cov = sum(ref1freqs)
@@ -242,7 +238,7 @@ for PosMin1, (ref1freqs, ref2freqs) in enumerate(zip(ref1freqs,ref2freqs)):
       SimScoreCont = 'NA'
     else:
       ref1freqs = ref1freqs[:5]
-      ref2freqs = ref2freqs[:5]
+      ref2freqs = ref2freqs[:5]  
       ref1cov = sum(ref1freqs)
       ref2cov = sum(ref2freqs)
       if ref1cov == 0 or ref2cov == 0:
@@ -286,7 +282,7 @@ for PosMin1, (ref1freqs, ref2freqs) in enumerate(zip(ref1freqs,ref2freqs)):
       outstring += ',' + str(SimScoreCont)
 
 # Print output
-if args.compare_snips_with_coverage:
+if args.compare_snips_with_coverage:  
   print(NumPosWithHigherCovIn1, NumPosWithHigherCovIn2)
 else:
   print(outstring)

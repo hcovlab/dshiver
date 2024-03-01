@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-from __future__ import print_function
+from Bio import AlignIO
+import itertools
+import os
+import sys
+from AuxiliaryFunctions import CallAmbigBaseIfNeeded
 
 ## Author: Chris Wymant, chris.wymant@bdi.ox.ac.uk
 ## Acknowledgement: I wrote this while funded by ERC Advanced Grant PBDR-339251
@@ -20,17 +24,12 @@ argument you used there must be specified here. Output is printed to stdout
 suitable for redirection to a csv file.'''
 
 import argparse
-import os
-import sys
-from Bio import AlignIO
-import itertools
-from AuxiliaryFunctions import CallAmbigBaseIfNeeded
 
 # Define a function to check files exist, as a type for the argparse.
 def File(MyFile):
-  if not os.path.isfile(MyFile):
-    raise argparse.ArgumentTypeError(MyFile+' does not exist or is not a file.')
-  return MyFile
+    if not os.path.isfile(MyFile):
+        raise argparse.ArgumentTypeError(MyFile+' does not exist or is not a file.')
+    return MyFile
 
 # Set up the arguments for this script
 parser = argparse.ArgumentParser(description=ExplanatoryMessage)
@@ -223,7 +222,7 @@ def GetFreqs(BaseFreqsFile, consensus):
     elif base == '-':
       # If the seq hasn't started yet, all base counts equal zero; if this is a
       # gap inside the seq, reproduce the base counts from the last position.
-      # This is just to facilitate the coverage calculation, for which we take
+      # This is just to facilitate the coverage calculation, for which we take 
       # the coverage (sum of counts) here to be equal to its last value before
       # the deletion, but we won't report the breakdown into different bases.
       freqs = LastPosFreqs
@@ -262,18 +261,16 @@ if args.compare_simple:
 if args.compare:
   outstring += ',base frequency similarity score'
 
-
-
 NumPosWithHigherCovIn1 = 0
 NumPosWithHigherCovIn2 = 0
 
 # Record each row of the csv file
-for PosMin1, (seq1freqs, seq2freqs) in enumerate(zip(AllSeq1freqs,
+for PosMin1, (seq1freqs, seq2freqs) in enumerate(itertools.zip(AllSeq1freqs,
 AllSeq2freqs)):
   PosInSeq1 = seq1PosConversions[PosMin1]
   PosInSeq2 = seq2PosConversions[PosMin1]
   outstring += '\n' + str(PosMin1+1) + ',' + str(PosInSeq1) + ',' + \
-  str(PosInSeq2)
+  str(PosInSeq2) 
 
   seq1cov = sum(seq1freqs[:5])
   seq2cov = sum(seq2freqs[:5])
@@ -294,7 +291,7 @@ AllSeq2freqs)):
       SimScoreCont = 'NA'
     else:
       seq1freqs = seq1freqs[:5]
-      seq2freqs = seq2freqs[:5]
+      seq2freqs = seq2freqs[:5]  
       if seq1cov == 0 or seq2cov == 0:
         SimScoreBin = 'NA'
         SimScoreCont = 'NA'
@@ -333,7 +330,7 @@ AllSeq2freqs)):
 # Print output
 if args.compare_snips_with_coverage:
   simple_total_diffs = 0
-  for PosMin1, (base1, base2) in enumerate(zip(seq1, seq2)):
+  for PosMin1, (base1, base2) in enumerate(itertools.zip(seq1, seq2)):
     if base1 != base2 and \
     PosMin1+1 >= args.start_pos_in_aln and \
     PosMin1+1 <= args.end_pos_in_aln and \

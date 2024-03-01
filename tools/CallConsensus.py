@@ -48,7 +48,7 @@ type=int)
 parser.add_argument('MinFracToCall', help='The minimum fraction of reads at a'+\
 ' position before we call that base (or those bases, when one base alone does'+\
 ' not reach that threshold fraction; e.g. say you have 60%% A, 30%% C and ' +\
-'10%% G: if you set this fraction to 0.6 or lower we call an A, if you set ' +\
+'10%% G: if you set this fraction to 0.6 or lower we call an A, if you set ' + \
 'it to 0.6-0.9 we call an M for "A or C", if you set it to 0.9-1 we call a ' + \
 'V for "A, C or G".). Alternatively, if you choose a negative value, we '+\
 'always call the single most common base regardless of its fraction, unless ' +\
@@ -83,7 +83,7 @@ BaseFreqFile = args.BaseFreqFile
 MinCoverage = args.MinCoverage
 MinCovForUpper = args.MinCovForUpper
 
-# Check that MinCoverage and MinCovForUpper are positive integers, the
+# Check that MinCoverage and MinCovForUpper are positive integers, the 
 # latter not smaller than the former.
 if MinCoverage < 1:
   print('The specified MinumumCoverageToCallBase of', MinCoverage, \
@@ -120,7 +120,7 @@ def CallAmbigBaseIfNeeded(bases, coverage):
     # otherwise, find the ambiguity code for this set of bases.
     if GapChar in bases:
       BaseHere = 'N'
-    else:
+    else:  
       try:
         BaseHere = ReverseIUPACdict2[bases]
       except KeyError:
@@ -149,7 +149,7 @@ def CallEnoughBases(BaseCounts, MinCoverage, coverage):
   # count is the same as the current one - then we should take that one too.
   # If we reach the end of the list, there's no 'next' to check: we need all the
   # bases.
-  CountSoFar = 0
+  CountSoFar = 0  
   for i, count in enumerate(SortedBaseCounts):
     if i == NumExpectedBases - 1:
       NumBasesNeeded = i+1
@@ -201,7 +201,7 @@ with open(BaseFreqFile, 'r') as f:
         '. One character only was expected. Quitting.', file=sys.stderr)
         exit(1)
 
-    # Convert to ints
+    # Convert to ints    
     try:
       counts = list(map(int, counts))
     except ValueError:
@@ -233,7 +233,7 @@ with open(BaseFreqFile, 'r') as f:
     if count == MaxCount]
 
     # If we're calling the most common base regardless of count:
-    if CallMostCommon:
+    if CallMostCommon: 
       BaseToCall = CallAmbigBaseIfNeeded(BasesWithMaxCount, coverage)
 
     else:
@@ -246,7 +246,7 @@ with open(BaseFreqFile, 'r') as f:
         BaseToCall = CallEnoughBases(counts, CountToCallBase, coverage)
 
     consensus += BaseToCall
-
+      
 # Replaces gaps that border "no coverage" by "no coverage".
 if not args.keep_gaps_by_missing:
   consensus = PropagateNoCoverageChar(consensus)
@@ -293,3 +293,4 @@ SeqIO.write(OutputSeqs, sys.stdout, "fasta")
 #print(insert_newlines(consensus))
 #print('>' + args.ref_seq_name)
 #print(insert_newlines(RefSeq))
+

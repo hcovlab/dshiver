@@ -7,7 +7,7 @@ from __future__ import print_function
 ## Overview:
 ExplanatoryMessage = '''Aligns more sequences to a pairwise alignment in which
 the first sequence contains missing coverage, i.e. the "?" character. Output is
-printed to stdout suitable for redirection to a fasta-format file. The pairwise
+printed to stdout suitable for redirection to a fasta-format file. The pairwise 
 alignment is nominally the consensus (called from parsing mapped reads) and the
 reference used for mapping, in that order. Alignment is performed using mafft;
 mafft does not know what missing coverage is, hence the need for this program.
@@ -73,17 +73,17 @@ for seq in SeqIO.parse(open(args.SeqPairWithMissingCov),'fasta'):
     continue
   print('Found three sequences in', args.SeqPairWithMissingCov+\
   '; expected only two. Quitting.', file=sys.stderr)
-  exit(1)
+  sys.exit(1)
 if not RefFound:
   print('Less than two sequences found in', args.SeqPairWithMissingCov+\
   '; expected two. Quitting.', file=sys.stderr)
-  exit(1)
+  sys.exit(1)
 
 # Check consensus.id != ref.id
 if consensus.id == ref.id:
   print("The consensus and the ref should have different names in",
   args.SeqPairWithMissingCov + ". Quitting.", file=sys.stderr)
-  exit(1)
+  sys.exit(1)
 
 # Check the consensus and its ref are aligned. Skip positions with no bases.
 ConsensusAsString = str(consensus.seq)
@@ -91,7 +91,7 @@ RefAsString = str(ref.seq)
 if len(ConsensusAsString) != len(RefAsString):
   print(args.SeqPairWithMissingCov, 'is not an alignment - seq lengths', \
   'differ. Quitting.', file=sys.stderr)
-  exit(1)
+  sys.exit(1)
 NewConsensusAsString = ''
 NewRefAsString = ''
 for ConsensusBase, RefBase in zip(ConsensusAsString, RefAsString):
@@ -112,9 +112,9 @@ IDsOfSeqsToBeAdded = [seq.id for seq in \
 SeqIO.parse(open(args.OtherSeqsToBeAdded),'fasta')]
 if consensus.id in IDsOfSeqsToBeAdded:
   print('A sequence in', args.OtherSeqsToBeAdded, 'is called', consensus.id +
-  ', like the consensus in', args.SeqPairWithMissingCov +
+  ', like the consensus in', args.SeqPairWithMissingCov + 
   '. Rename to avoid such a clash. Quitting.', file=sys.stderr)
-  exit(1)
+  sys.exit(1)
 
 # Align
 ConsensusNoMissingCov = copy.copy(consensus)
@@ -131,14 +131,14 @@ else:
   AddOption = '--add'
 with open(args.temp_file_2, 'w') as f:
   try:
-    ExitStatus = subprocess.call(args.x_mafft.split() + ['--preservecase',
+    ExitStatus = subprocess.call([args.x_mafft] + args.x_mafft.split() + ['--preservecase',
     AddOption, args.OtherSeqsToBeAdded, args.temp_file_1], stdout=f)
     assert ExitStatus == 0
-  except:
+  except FileNotFoundError:
     print('Problem calling mafft. Quitting.', file=sys.stderr)
-    raise
+    sys.exit(1)
 
-# Read in the aligned seqs. Note which one is the consensus. Check all the
+# Read in the aligned seqs. Note which one is the consensus. Check all the 
 # expected seqs are recovered.
 AlignedSeqs = []
 for i, seq in enumerate(SeqIO.parse(open(args.temp_file_2),'fasta')):
@@ -150,7 +150,7 @@ sorted([consensus.id, ref.id] + IDsOfSeqsToBeAdded):
   print('Error: different sequences found in', args.temp_file_2, \
   'compared to', args.SeqPairWithMissingCov, 'and', args.OtherSeqsToBeAdded + \
   '. Quitting.', file=sys.stderr)
-  exit(1)
+  sys.exit(1)
 
 # Check the consensus only has changes in gaps.
 PostAlignmentConsensus = AlignedSeqs[ConsensusPosition]
@@ -159,7 +159,7 @@ if PostAlignmentConsensusAsStr.replace('-','') != \
 ConsensusNoMissingCovStr.replace('-',''):
   print('Error:', consensus.id, 'contains different bases before and after', \
   'alignment. Quitting.', file=sys.stderr)
-  exit(1)
+  sys.exit(1)
 
 # To be used shortly
 def CharToInt(char):
@@ -202,15 +202,15 @@ for ProgThroughPreAln, PreAlnConsensusBit in enumerate(PreAlnConsensusBits):
   PostAlnConsensusBit     = PostAlnConsensusBits[ProgThroughPostAln]
   PostAlnConsensusBitType = PostAlnConsensusBitTypes[ProgThroughPostAln]
 
-  # A PreAln BitType 0 or 1 should become a 1 after alignment. We want the
-  # PostAln length of the bit (it could be longer due to accommodating a new
+  # A PreAln BitType 0 or 1 should become a 1 after alignment. We want the 
+  # PostAln length of the bit (it could be longer due to accommodating a new 
   # insertion), but the PreAln BitType.
   if PreAlnConsensusBitType in [0,1]:
     if PostAlnConsensusBitType != 1:
       print('Error running', sys.argv[0] + ': gap or missing coverage became', \
       'something other than a gap after alignment. Please report to Chris', \
       'Wymant (google for current email address).', file=sys.stderr)
-      exit(1)
+      sys.exit(1)
     NewConsensus += PreAlnConsensusBit[0] * len(PostAlnConsensusBit)
     ProgThroughPostAln += 1
     continue
@@ -229,7 +229,7 @@ for ProgThroughPreAln, PreAlnConsensusBit in enumerate(PreAlnConsensusBits):
       "before alignment turns into something starting with a gap, but its not",\
       'the first sequence fragment. Please report to Chris', \
       'Wymant (google for current email address).', file=sys.stderr)
-      exit(1)
+      sys.exit(1)
     NewForm += '?' * len(PostAlnConsensusBit)
     ProgThroughPostAln += 1
   PreAlnConsensusBitLength = len(PreAlnConsensusBit)
@@ -241,7 +241,7 @@ for ProgThroughPreAln, PreAlnConsensusBit in enumerate(PreAlnConsensusBits):
     print('Error running', sys.argv[0] + ': unable to match a split fragment', \
     'of consensus to the same fragment pre-alignment. Please report to Chris', \
     'Wymant (google for current email address).', file=sys.stderr)
-    exit(1)
+    sys.exit(1)
   NewConsensus += NewForm
 
 # If the PreAlnConsensus ended with sequence but the PostAlnConsensus ends with
@@ -255,21 +255,20 @@ elif ProgThroughPostAln != NumPostAlnConsensusBits:
   print('Error running', sys.argv[0] + ': something went wrong matching up', \
   'the consensus before and after alignment. Please report to Chris', \
   'Wymant (google for current email address).', file=sys.stderr)
-  exit(1)
+  sys.exit(1)
 
 # Output sanity checks
 if NewConsensus.replace('?', '-') != PostAlignmentConsensusAsStr:
   print('Error running', sys.argv[0] + ': something went wrong replacing "-"', \
   'characters by of "?" characters. Please report to Chris', \
   'Wymant (google for current email address).', file=sys.stderr)
-  exit(1)
+  sys.exit(1)
 if '?-' in NewConsensus or '-?' in NewConsensus:
   print('Error running', sys.argv[0] + ': found "-"', \
   'character next to "?" character in output. Please report to Chris', \
   'Wymant (google for current email address).', file=sys.stderr)
-  exit(1)
+  sys.exit(1)
 
 AlignedSeqs[ConsensusPosition].seq = Seq.Seq(NewConsensus)
 
 SeqIO.write(AlignedSeqs, sys.stdout, "fasta")
-

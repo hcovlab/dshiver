@@ -6,7 +6,7 @@ from __future__ import print_function
 ##
 ## Overview:
 ExplanatoryMessage = '''Called with a fasta file containing a consensus and its
-reference for mapping, and a coordinate file produced by fully processing a
+reference for mapping (SEE IMPORTANT NOTE BELOW), and a coordinate file produced by fully processing a
 sample with shiver, this script does the following: (1) excises insertions of
 the consensus with respect to its reference, (2) excises insertions of the
 reference (constructed out of the sample's contigs) with respect to the set of
@@ -14,7 +14,12 @@ existing references given as input to shiver, (3) adds gaps into the consensus
 so that it is in the same coordinates system as the alignment of existing
 references given as input to shiver, (4) prints the result to stdout, suitable
 for redirection into a fasta file. Combining this output from multiple samples
-into a single file gives an alignment.'''
+into a single file gives an alignment.
+IMPORTANT NOTE: this can only be used on shiver's first-round mapping result,
+for which the mapping reference was constructed out of aligned contigs and real
+references. It cannot be used with the second-round mapping result, for which
+the mapping reference was the consensus from the first round of mapping. See
+chapter 'The Global Alignment' in the shiver manual for more detail.'''
 # NB, for brevity, 'pos' = position, 'aln' = alignment, 'seq' = sequence
 GapChar = '-'
 
@@ -40,10 +45,20 @@ parser.add_argument('ConsensusFile', type=File)
 parser.add_argument('CoordsFile', type=File)
 args = parser.parse_args()
 
+# Exit if _remap is in the file name
+if "_remap" in os.path.basename(args.ConsensusFile):
+  print(__file__, 'was run on consensus file', args.ConsensusFile + \
+  '; that file name contains the string "_remap". See the "IMPORTANT NOTE"',
+  'part of the --help message for', __file__ + ". If", args.ConsensusFile,
+  "really is the consensus produced by shiver's first-round mapping, rename it",
+  "(just temporarily if desired) to bypass this saftey check. Quitting.",
+  file=sys.stderr)
+  exit(1)
+
 # Read in the seq
 SeqAsString = None
 RefAsString = None
-for InSeq in SeqIO.parse(open(args.ConsensusFile),'fasta'):
+for InSeq in SeqIO.parse(open(args.ConsensusFile, 'r'),'fasta'):
   if SeqAsString == None:
     seq = InSeq
     SeqAsString = str(InSeq.seq)
@@ -64,8 +79,6 @@ SeqNoInsertions = ''
 for position,BaseInRef in enumerate(RefAsString):
   if BaseInRef != GapChar:
     SeqNoInsertions += SeqAsString[position]
-
-
 
 SeqForGlobalAln = ''
 PrevPosInAln = 0
@@ -88,7 +101,7 @@ def CheckAndUpdatePos(pos, PrevPos, PosType):
     print('In', args.CoordsFile +', position', pos, 'in the', PosType, \
     'follows on from position', str(PrevPos) +'. Quitting.', file=sys.stderr)
     exit(1)
-  if PosType == SeqLength and pos > SeqLength:
+  if PosType == "reference" and pos > SeqLength:
     print('Encountered sequence position', pos, 'in', args.CoordsFile + \
     ', which is after the end of the sequence in', args.ConsensusFile, '('+ \
     str(SeqLength) +'bp long). Quitting.', file=sys.stderr)
@@ -134,7 +147,7 @@ def PropagateNoCoverageChar(seq, LeftToRightDone=False):
   ACTG---?---ACTG
   becomes
   ACTG???????ACTG'''
-
+  
   if LeftToRightDone:
     seq = seq[::-1]
   BaseToLeftIsNoCoverage = False
@@ -160,10 +173,6 @@ def PropagateNoCoverageChar(seq, LeftToRightDone=False):
 SeqForGlobalAln = PropagateNoCoverageChar(SeqForGlobalAln)
 
 seq.seq = Seq.Seq(SeqForGlobalAln)
-#SeqIO.write(seq, sys.stdout, "fasta")
 
-FastaOut = SeqIO.FastaIO.FastaWriter(sys.stdout, wrap=50)
-FastaOut.write_header()
-FastaOut.write_record(seq)
-FastaOut.write_footer()
-
+# Writing the output in FASTA format
+SeqIO.write([seq], sys.stdout, "fasta")

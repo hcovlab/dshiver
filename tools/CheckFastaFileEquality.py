@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-from __future__ import print_function
+from Bio import SeqIO
+import argparse
+import os
+import sys
 
 ## Author: Chris Wymant, chris.wymant@bdi.ox.ac.uk
 ## Acknowledgement: I wrote this while funded by ERC Advanced Grant PBDR-339251
@@ -11,11 +14,6 @@ difference is found we print "false" to stdout and exit with status 0; if no
 difference is found we print "true" to stdout and exit with status 0. Any error
 should result in different output printed to stdout/stderr and a non-zero exit
 status.'''
-
-import argparse
-import os
-import sys
-from Bio import SeqIO
 
 # Define a function to check files exist, as a type for the argparse.
 def File(MyFile):
@@ -50,7 +48,7 @@ def FastaFileToSeqDict(FastaFile):
       '; sequence names ought to be unique. Quitting.', file=sys.stderr)
       exit(1)
     if args.ignore_gaps:
-      seq.seq = seq.seq.ungap('-')
+      seq.seq = seq.seq.replace('-','')
     SeqAsString = str(seq.seq)
     if not args.case_sensitive:
       SeqAsString = SeqAsString.upper()

@@ -11,13 +11,12 @@ redirection to another file.'''
 
 import argparse
 import os
-import sys
 
 # Define a function to check files exist, as a type for the argparse.
 def File(MyFile):
-  if not os.path.isfile(MyFile):
-    raise argparse.ArgumentTypeError(MyFile+' does not exist or is not a file.')
-  return MyFile
+    if not os.path.isfile(MyFile):
+        raise argparse.ArgumentTypeError(MyFile+' does not exist or is not a file.')
+    return MyFile
 
 # Set up the arguments for this script
 parser = argparse.ArgumentParser(description=ExplanatoryMessage)
@@ -25,5 +24,5 @@ parser.add_argument('InputFile', type=File)
 args = parser.parse_args()
 
 with open(args.InputFile, 'r') as f:
-  for line in f:
-    print(line.rstrip())
+    for line in f:
+        print(line.rstrip())

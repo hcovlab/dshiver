@@ -29,7 +29,7 @@ primers="$5"
 ThisDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$ThisDir"/'shiver_funcs.sh'
 CheckFilesExist "$ConfigFile" "$RefAlignment"
-CheckConfig "$ConfigFile" true false false || \
+CheckConfig "$ConfigFile" true false false false || \
 { echo "Problem with $ConfigFile. Quitting." >&2 ; exit 1 ; }
 
 # If OutDir does not exist, try to create it.

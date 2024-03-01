@@ -34,11 +34,22 @@ def File(MyFile):
 # Set up the arguments for this script
 parser = argparse.ArgumentParser(description=ExplanatoryMessage)
 parser.add_argument('BlastFile', type=File)
+parser.add_argument('OverlapFracToMerge', type=float, help='''When two blast
+hits for the same contig have a fractional overlap (defined as the length of the
+part of the contig spanned by both hits divided by the length of the shorter of
+the two hits) equal to or greater than this value, we will merge them into a
+single hit. When the fractional overlap is less than this value, the two hits
+will be kept separate, resulting in the contig being split into two parts (one
+corresponding to each hit). A value of 1 or greater means partially overlapping
+hits are never merged.''')
 parser.add_argument('-C', '--contigs', type=File, \
 help='The fasta file of contigs.')
 parser.add_argument('-O', '--out-file', help='''The file to which corrected
 contigs will be written. Specifying "-" will print output to stdout. If
 correction is not required, this file will not be created.''')
+parser.add_argument('-B', '--blast-output', help='''Use this to specify an
+output file into which the blast hits will be written after we have discarded
+the ones not being used (those contained wholly inside another one).''')
 parser.add_argument('--overwrite', action='store_true',
 help='If the out file exists already, overwrite it instead of stopping.')
 parser.add_argument('-F', '--min-hit-frac', type=float, help='''Only relevant if
@@ -75,8 +86,8 @@ with it.''')
 args = parser.parse_args()
 
 # The --contigs and --out-file flags need each other.
-MakeCorrections = args.contigs != None
-if MakeCorrections and args.out_file == None:
+MakeCorrections = args.contigs is not None
+if MakeCorrections and args.out_file is None:
   print('The --contigs and --out-file flags need each other: use both or', \
   'neither. Quitting.', file=sys.stderr)
   exit(1)
@@ -96,6 +107,14 @@ if not (0 < args.min_hit_frac < 1):
   print('The --min-hit-frac value should be greater than 0 and less than 1.', \
   'Quitting.', file=sys.stderr)
   exit(1)
+
+# OverlapFracToMerge should be positive. If it's greater than or equal to 1,
+# that means no merging.
+if args.OverlapFracToMerge <= 0:
+  print('The OverlapFracToMerge value should be greater than 0. Quitting.',
+  file=sys.stderr)
+  exit(1)
+DoHitMerging = args.OverlapFracToMerge < 1
 
 # columns of the blast output are:
 # qseqid means Query Seq-id
@@ -120,12 +139,12 @@ with open(args.BlastFile) as f:
       'columns:\n', line, 'Quitting.', sep='', file=sys.stderr)
       exit(1)
     try:
-      evalue, pident, qlen, qstart, qend, sstart, send = float(evalue), \
-      float(pident), int(qlen), int(qstart), int(qend), int(sstart), int(send)
+      qlen, qstart, qend, sstart, send = int(qlen), int(qstart), int(qend), \
+      int(sstart), int(send)
     except ValueError:
-      print('Could not understand columns 3-9 (evalue, pident, qlen, qstart,' ,\
+      print('Could not understand columns 5-9 (qlen, qstart, ' ,\
       'qend, sstart, send) on line\n', line, 'in ', args.BlastFile, ' as',\
-      'floats & ints. Quitting.', sep='', file=sys.stderr)
+      'integers. Quitting.', sep='', file=sys.stderr)
       exit(1)
     if qstart >= qend:
       print('qstart greater than or equal to qend on line\n', line, 'in ', \
@@ -154,6 +173,95 @@ with open(args.BlastFile) as f:
 if len(HitDict) == 0:
   print(args.BlastFile, 'contains no hits. Quitting.', file=sys.stderr)
   exit(1)
+
+def MergeStronglyOverlappingHits(hits, MinOverlap):
+  '''Merge all pairs of hits whose overlap is >= the threshold.'''
+
+  if len(hits) == 1:
+    return hits
+
+  # All hits should have the same qseqid and qlen (the 0th and 4th elements of
+  # each hit list).
+  assert all(hit[0] == hits[0][0] for hit in hits[1:])
+  assert all(hit[4] == hits[0][4] for hit in hits[1:])
+
+  # Iterate through all pairs of hits, indexed by i and j, and see if they
+  # should be merged. If so, merge and restart the iteration (so that all
+  # subsequent comparisons work with our new merged hit). Once all pairs
+  # have been considered and no (further) merging is needed, we're finished.
+  finished = False
+  while not finished:
+    HaveMergedThisRound = False
+    for i in range(len(hits) - 1):
+
+      # This is to jump out of the i-j double loop asap after triggering the
+      # second break statement later on.
+      if HaveMergedThisRound:
+        break
+
+      # Unpack the hit.
+      qseqid_i, sseqid_i, evalue_i, pident_i, qlen_i, qstart_i, qend_i, \
+      sstart_i, send_i = hits[i]
+      ForwardHit_i = sstart_i <= send_i
+
+      for j in range(i + 1, len(hits)):
+        qseqid_j, sseqid_j, evalue_j, pident_j, qlen_j, qstart_j, qend_j, \
+        sstart_j, send_j = hits[j]
+        ForwardHit_j = sstart_j <= send_j
+
+        #print("considering", qseqid_i, sseqid_i, qstart_i, qend_i, "and",
+        #qseqid_j, sseqid_j, qstart_j, qend_j, ForwardHit_i, ForwardHit_j)
+
+        # Only consider merging if both hits are in the same direction (be that
+        # forwards or backwards).
+        if ForwardHit_i == ForwardHit_j:
+
+          # Skip if the hits don't overlap enough.
+          overlap = min(qend_i, qend_j) - max(qstart_i, qstart_j) + 1
+          MinHitLength = min(abs(qend_i - qstart_i), abs(qend_j - qstart_j)) + 1
+          overlap = float(overlap) / MinHitLength
+          #print("overlap:", overlap)
+          if overlap < args.OverlapFracToMerge:
+            continue
+
+          # If we've reached here, we should merge the two hits.
+          qseqid = qseqid_i
+          if sseqid_j == sseqid_i:
+            sseqid = sseqid_j
+          else:
+            sseqid = "multiple"
+          evalue = "NA"
+          pident = "NA"
+          qlen = qlen_i
+          qstart = min(qstart_i, qstart_j)
+          qend = max(qend_i, qend_j)
+          if ForwardHit_i:
+            sstart = min(sstart_i, sstart_j)
+            send = max(send_i, send_j)
+          else:
+            sstart = max(sstart_i, sstart_j)
+            send = min(send_i, send_j)
+          MergedHit = [qseqid, sseqid, evalue, pident, qlen, qstart, qend, \
+          sstart, send]
+
+          # Delete the two hits we're merging, and add the merged one. This does
+          # not interfere with the iteration through i and j, because we will
+          # progress to the next i and then immediately break. 
+          del hits[j]
+          del hits[i]
+          hits.append(MergedHit)
+
+          HaveMergedThisRound = True
+          break
+
+        # end of "if hits are in the same direction" scope
+      # end of j loop
+    # end of i loop
+
+    if not HaveMergedThisRound:
+      finished = True
+
+  return hits
 
 CorrectionsNeeded = False
 for contig, hits in HitDict.items():
@@ -186,6 +294,9 @@ for contig, hits in HitDict.items():
       del HitDict[contig][i]
     hits = HitDict[contig]
 
+    if DoHitMerging:
+      hits = MergeStronglyOverlappingHits(hits, args.OverlapFracToMerge)
+
     # If we're only checking (not correcting) and there are multiple hits or
     # a reverse hit or a too small hit, quit.
     if len(hits) > 1:
@@ -200,10 +311,10 @@ for contig, hits in HitDict.items():
   qseqid, sseqid, evalue, pident, qlen, qstart, qend, sstart, send = FirstHit
 
   # If there's a bit of the contig that doesn't blast and the user wants to
-  # discard such bits, correction is needed. However if we're just checking
-  # whether correction is needed (i.e. not actually correcting the contigs),
-  # don't quit just yet: the --min-hit-frac option is designed to allow some
-  # flexibility so that we don't report that correction is necessary because
+  # discard such bits, correction is needed. However if we're just checking 
+  # whether correction is needed (i.e. not actually correcting the contigs), 
+  # don't quit just yet: the --min-hit-frac option is designed to allow some 
+  # flexibility so that we don't report that correction is necessary because 
   # 0.001% of the contig fails blasting.
   HitLength = qend - qstart + 1
   if HitLength < qlen and not args.keep_non_hits and MakeCorrections:
@@ -227,6 +338,13 @@ for contig, hits in HitDict.items():
       exit(1)
     CorrectionsNeeded = True
 
+# Write the blast output if desired.
+if args.blast_output != None:
+  with open(args.blast_output, "w") as f:
+    for contig, hits in HitDict.items():
+      for hit in hits:
+        f.write(",".join(map(str, hit)) + "\n")
+
 # If no corrections are needed, quit successfully.
 if not CorrectionsNeeded:
   print('No contig correction needed for', args.BlastFile + '.')
@@ -236,138 +354,91 @@ if not CorrectionsNeeded:
 ContigDict = collections.OrderedDict()
 for seq in SeqIO.parse(open(args.contigs),'fasta'):
   if seq.id in ContigDict:
-    print('Encountered sequence', seq.id, 'a second time in', args.contigs+\
-    'Sequence names should be unique. Quitting.', file=sys.stderr)
+    print('Encountered sequence', seq.id, 'a second time in', args.contigs+ \
+    '. Unexpected. Quitting.', file=sys.stderr)
     exit(1)
-  ContigDict[seq.id] = seq
+  ContigDict[seq.id] = str(seq.seq)
 
-# Check we have a sequence for each hit
-UnknownHits = [hit for hit in HitDict.keys() if not hit in ContigDict.keys()]
-if len(UnknownHits) != 0:
-  print('The following hits in', args.BlastFile, 'do not have a corresponding',\
-  'sequence in', args.contigs +':\n', ' '.join(UnknownHits) + \
-  '\nQuitting.', file=sys.stderr)
-  exit(1)
-
-OutSeqs = []
-for ContigName, hits in HitDict.items():
-
-  seq = ContigDict[ContigName]
-  SeqLength = len(seq.seq)
-
-  # Check all hits for a contig report the same length that we observe.
+# For each contig, for each hit: create the new contig(s) that result from 
+# the hit(s).
+for contig, hits in HitDict.items():
+  ContigSeq = ContigDict[contig]
+  NewContigs = [ContigSeq]
   for hit in hits:
-    qlen = hit[4]
-    if qlen != SeqLength:
-      print(args.BlastFile, 'has qlen =', qlen, 'for contig', ContigName, \
-      'but that contig has length', SeqLength, 'in', args.contigs + \
-      '. Quitting.', file=sys.stderr)
-      exit(1)
 
-  # If a contig has only one hit, easy: trim off the bits not covered by the
-  # hit if desired, and reverse complement if needed.
-  NumHits = len(hits)
-  if NumHits == 1:
-    if not args.keep_non_hits:
-      qstart, qend = hits[0][5:7]
-      seq.seq = seq.seq[qstart-1:qend]
-    sstart, send = hits[0][7:9]
-    if sstart > send:
-      seq.seq = seq.seq.reverse_complement()
-    seq.id += '_BlastsTo_' + str(min(sstart, send)) + '-' + \
-    str(max(sstart, send))
-    OutSeqs.append(seq)
+    # Skip hits with low hit fractions if not correcting contigs.
+    qseqid, sseqid, evalue, pident, qlen, qstart, qend, sstart, send = hit
+    HitLength = qend - qstart + 1
+    HitFrac = float(HitLength) / qlen
+    if not MakeCorrections and HitFrac < args.min_hit_frac:
+      continue
 
-  else:
-
-    # Sort hits by their start point.
-    StartPoints = [hit[5] for hit in hits]
-    assert len(StartPoints) == len(set(StartPoints)), \
-    'Internal error cutting contigs. Please report to Chris Wymant.'
-    hits = sorted(hits, key=lambda x:x[5])
-
-    for i, hit in enumerate(hits):
-
-      ThisStart, ThisEnd = hit[5:7]
-      if not args.dont_duplicate:
-
-        # For this block, we want to keep sequence that's not inside a hit, and
-        # duplicate sequence that's between two hits or overlapped by two hits.
-        if args.keep_non_hits:
-          if i == 0:
-            NextStart, NextEnd = hits[i+1][5:7]
-            CutStart = 1
-            CutEnd = max(ThisEnd, NextStart)
-          elif i == NumHits-1:
-            LastStart, LastEnd = hits[i-1][5:7]
-            CutStart = min(LastEnd, ThisStart) + 1
-            CutEnd = SeqLength
-          else:
-            LastStart, LastEnd = hits[i-1][5:7]
-            NextStart, NextEnd = hits[i+1][5:7]
-            CutStart = min(LastEnd, ThisStart) + 1
-            CutEnd = max(ThisEnd, NextStart)
-
-        # For this block, we want to discard sequence that's not inside a hit,
-        # and duplicate sequence that's overlapped by two hits.
-        else:
-          CutStart = ThisStart
-          CutEnd = ThisEnd
-
+    # Chop the contig(s) to keep just the hit(s).
+    if sstart <= send:
+      if qstart <= qend:
+        StartInContig = qstart
+        EndInContig = qend
       else:
+        StartInContig = qlen - qend + 1
+        EndInContig = qlen - qstart + 1
+    else:
+      if qstart <= qend:
+        StartInContig = qlen - qend + 1
+        EndInContig = qlen - qstart + 1
+      else:
+        StartInContig = qstart
+        EndInContig = qend
+    assert 1 <= StartInContig <= len(ContigSeq)
+    assert 1 <= EndInContig <= len(ContigSeq)
 
-        # For this block, we want to keep sequence that's not inside a hit, and
-        # cut in half sequence that's between two hits or overlapped by two
-        # hits.
-        if args.keep_non_hits:
+    # If --keep-non-hits is being used, the hit itself (or hits either side of
+    # it) might need duplicating.
+    if args.keep_non_hits:
+      assert MakeCorrections, \
+      "Internal error: this option only makes sense if contig correction is being performed."
+      assert sstart <= send, "Internal error: this code only implemented for forward hits."
+      if len(NewContigs) > 1:
+        assert len(NewContigs) == 2
+        assert NewContigs[0][-1] == NewContigs[1][0] == "N"
+      if NewContigs[0][EndInContig:] == "N":
+        pass # Contig ends with an N, so hit is contained.
+      else:
+        # Duplicate the bit of the contig to the right of the hit.
+        NewContigs[0] += ContigSeq[EndInContig:]
+      if NewContigs[-1][:StartInContig - 1] == "N":
+        pass # Contig starts with an N, so hit is contained.
+      else:
+        # Duplicate the bit of the contig to the left of the hit.
+        NewContigs[-1] = ContigSeq[:StartInContig - 1] + NewContigs[-1]
+
+    # Chop the contig.
+    NewContigs = [NewContig[StartInContig - 1:EndInContig] for NewContig in NewContigs]
+
+    # If the hit is in the reverse direction, reverse complement the new contigs.
+    if sstart > send:
+      NewContigs = ["".join(reversed(Seq)) for Seq in NewContigs]
+      # Note that if the hit is also in the reverse direction (qstart > qend),
+      # it won't have been reversed, because the contig should have been chopped
+      # from the end to the start, so qstart will be <= qend.
+
+    # Write the new contigs to the output file.
+    for i, NewContig in enumerate(NewContigs):
+      if len(hits) > 1:
+        if args.dont_duplicate:
+          # We're making two new contigs that both have part of the old contig
+          # that was covered by the hits. Cut half way through this part, so
+          # neither new contig has any overlap with the other.
+          HalfLen = len(NewContig) // 2
           if i == 0:
-            NextStart, NextEnd = hits[i+1][5:7]
-            CutStart = 1
-            CutEnd = (ThisEnd + NextStart) / 2
-          elif i == NumHits-1:
-            LastStart, LastEnd = hits[i-1][5:7]
-            CutStart = (LastEnd + ThisStart) / 2 + 1
-            CutEnd = SeqLength
+            NewContig = NewContig[:-HalfLen]
           else:
-            LastStart, LastEnd = hits[i-1][5:7]
-            NextStart, NextEnd = hits[i+1][5:7]
-            CutStart = (LastEnd + ThisStart) / 2 + 1
-            CutEnd = (ThisEnd + NextStart) / 2
-
-        # For this block, we want to discard sequence that's not inside a hit,
-        # and cut in half sequence that's overlapped by two hits.
+            NewContig = NewContig[HalfLen:]
+        if i == 0:
+          assert not (len(NewContigs) > 1 and \
+          NewContig[-1] == NewContigs[1][0] == "N"), \
+          "Internal error: contig ends and starts with N in contig with >1 hit."
+          print('>' + contig + '_hit' + str(i + 1) + '\n' + NewContig, file=args.out_file)
         else:
-          if i == 0:
-            NextStart, NextEnd = hits[i+1][5:7]
-            CutStart = ThisStart
-            CutEnd = min(ThisEnd, (ThisEnd + NextStart) / 2)
-          elif i == NumHits-1:
-            LastStart, LastEnd = hits[i-1][5:7]
-            CutStart = max(ThisStart, (LastEnd + ThisStart) / 2 + 1)
-            CutEnd = ThisEnd
-          else:
-            LastStart, LastEnd = hits[i-1][5:7]
-            NextStart, NextEnd = hits[i+1][5:7]
-            CutStart = max(ThisStart, (LastEnd + ThisStart) / 2 + 1)
-            CutEnd = min(ThisEnd, (ThisEnd + NextStart) / 2)
-
-      ThisCutSeq = copy.deepcopy(seq)
-      ThisCutSeq.seq = ThisCutSeq.seq[CutStart-1 : CutEnd]
-      ThisCutSeq.description = ''
-
-      # Do we need to reverse complement?
-      sstart, send = hit[7:9]
-      if sstart > send:
-        ThisCutSeq.seq = ThisCutSeq.seq.reverse_complement()
-
-      ThisCutSeq.id += '.' + str(i + 1) + '_BlastsTo_' + \
-      str(min(sstart, send)) + '-' + str(max(sstart, send))
-
-      OutSeqs.append(ThisCutSeq)
-
-# Write output
-try:
-  SeqIO.write(OutSeqs, args.out_file, "fasta")
-except IOError:
-  print('Problem writing output to', args.out_file)
-  raise
+          print('>' + contig + '_hit' + str(i + 1) + '\n' + NewContig, file=args.out_file)
+      else:
+        print('>' + contig + '\n' + NewContig, file=args.out_file)

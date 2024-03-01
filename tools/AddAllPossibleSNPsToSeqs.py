@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-from __future__ import print_function
+from Bio import SeqIO
+from Bio import Seq
+import argparse
+import os
+import sys
+import collections
+import copy
 
 ## Author: Chris Wymant, chris.wymant@bdi.ox.ac.uk
 ## Acknowledgement: I wrote this while funded by ERC Advanced Grant PBDR-339251
@@ -8,14 +14,6 @@ from __future__ import print_function
 ExplanatoryMessage = '''For each DNA sequence in an input fasta file, generate
 all possible sequences that differ by a single SNP (i.e. a change between an A,
 C, G or T).'''
-
-import argparse
-import os
-import sys
-from Bio import SeqIO
-from Bio import Seq
-import collections
-import copy
 
 # Define a function to check files exist, as a type for the argparse.
 def File(MyFile):
@@ -81,6 +79,6 @@ for seq in InSeqObjects:
       OutSeqs.append(SeqIO.SeqRecord(Seq.Seq(MutatedSeq), id=ID,
       description=''))
       UniqueSeqs.add(MutatedSeq)
-
+      
 SeqIO.write(OutSeqs, args.OutputFasta, "fasta")
 #SeqIO.write(OutSeqs, sys.stdout, "fasta")

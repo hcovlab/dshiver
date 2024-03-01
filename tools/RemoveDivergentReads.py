@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-from __future__ import print_function
 
 ## Author: Chris Wymant, chris.wymant@bdi.ox.ac.uk
 ## Acknowledgement: I wrote this while funded by ERC Advanced Grant PBDR-339251
@@ -40,9 +39,11 @@ if not 0 < args.ReadIdentityThreshold <= 1:
   exit(1)
 
 # Get the reference.
-SeqList = list(SeqIO.parse(open(args.RefFile), 'fasta'))
+with open(args.RefFile, 'rb') as ref_file:
+    SeqList = list(SeqIO.parse(ref_file, 'fasta'))
+
 if len(SeqList) != 1:
-  print('There are', len(SeqList), 'sequences in', args.ref_file +\
+  print('There are', len(SeqList), 'sequences in', args.RefFile +\
   '. There should be exactly 1. Quitting.', file=sys.stderr)
   exit(1)
 RefSeq = str(SeqList[0].seq)
@@ -80,4 +81,3 @@ for read in InBam.fetch(RefName):
 
     else:
       OutBam.write(read)
-

@@ -2,7 +2,7 @@
 from __future__ import print_function
 
 ## Author: Chris Wymant, chris.wymant@bdi.ox.ac.uk
-## Acknowledgement: I wrote this while funded by ERC Advanced Grant PBDR-339251
+## Acknowledgement: I wrote this while funded by ERC Advanced Grant PBDR-339251 
 ##
 ## Overview
 ExplanatoryMessage = '''We construct the optimal reference for a given sample by
@@ -51,7 +51,7 @@ def File(MyFile):
 class SmartFormatter(argparse.HelpFormatter):
     def _split_lines(self, text, width):
         if text.startswith('R|'):
-            return text[2:].splitlines()
+            return text[2:].splitlines()  
         return argparse.HelpFormatter._split_lines(self, text, width)
 
 # Set up the arguments for this script
@@ -89,7 +89,7 @@ help='''R|Use this option to specify the name of the consensus
 sequence; use it when the AlignmentOfContigsToRefs argument is the
 alignment of contigs, consensus and mapping reference.
 We put each position in the alignment in one of the
-following four categories, then print the counts of
+following four categories, then print the counts of 
 each. (1) At least one of the flattened contigs agrees
 with the consensus. (2) All contigs disagree with the
 consensus. (3) At least one contig has a base and the
@@ -111,410 +111,136 @@ Contigs: bases + gaps  | 1 or 2 | n/a |  3  | n/a
          just gaps     |   2    | n/a | n/a | n/a
          no coverage   |   4    | n/a | n/a | n/a
 ''')
-parser.add_argument('-C2', '--check-contig-snps', help='''Use this option to
-specify the name of the consensus sequence; use it when the AlignmentOfContigsToRefs argument
-is an alignment containing the contigs and the consensus. Amongst all positions
-at which more than one base (not including gaps) is represented, we count the
-number where the longest contig's base agrees with the consensus (the first
-value we'll print to stdout), and the number where it does not (the second value
-we'll print to stdout).''')
+parser.add_argument('-C2', '--compare-contigs-to-consensus-2', \
+help='''R|Use this option to specify the name of the consensus
+sequence; use it when the AlignmentOfContigsToRefs argument is the
+alignment of contigs, consensus and mapping reference.
+As -C but compare the consensus to the mapping
+reference, not to the contigs.''')
+Args = parser.parse_args()
 
-args = parser.parse_args()
+# Read in the sequences
+Seqs, Refs = ReadSequencesFromFile(Args.AlignmentOfContigsToRefs)
 
-# Shorthand
-AlignmentFile = args.AlignmentOfContigsToRefs
-ContigNames = args.ContigName
-CompareContigsToConsensus = args.compare_contigs_to_consensus != None
-CheckContigSNPs = args.check_contig_snps != None
-if CompareContigsToConsensus:
-  ConsensusName = args.compare_contigs_to_consensus
-elif CheckContigSNPs:
-  ConsensusName = args.check_contig_snps
-else:
-  ConsensusName = None
+# Print the contigs length and exit, if requested
+if Args.contigs_length:
+  print('The contigs are of length '+str(len(Seqs[Args.ContigName[0]])))
+  sys.exit()
 
-# You would think stripping leading and trailing whitespace off the contig names
-# would do nothing, because they are parsed taking whitespace as a delimiter.
-# However, if the Mac \r character is amongst them that messes things up. This
-# solves it.
-ContigNames = [name.strip() for name in ContigNames]
+# Define a class to store all the per-position counts
+class PositionCounts:
+  def __init__(self):
+    self.Counts = collections.defaultdict(lambda: collections.defaultdict(float))
+  def Add(self, RefName, RefBase, ContigBase, Weight):
+    if RefBase != GapChar or ContigBase != GapChar:
+      self.Counts[RefName][ContigBase] += Weight
 
-# Can't use these two options together
-if CompareContigsToConsensus and CheckContigSNPs:
-  print('You cannot use both --compare-contigs-to-consensus and',
-  '--check-contig-snps options at once. Quitting.', file=sys.stderr)
-  exit(1)
+# Define a function to update BestRefGivenContigAlignment
+def UpdateBestRefGivenContigAlignment(BestRefGivenContigAlignment, \
+RefBase, ContigBase, TotalWeight):
+  if (ContigBase != GapChar and \
+  (RefBase == GapChar or ContigBase == RefBase)):
+    BestRefGivenContigAlignment[RefName].Add(RefName, RefBase, \
+    ContigBase, TotalWeight)
 
-# Check all contig names are unique
-CounterObject = collections.Counter(ContigNames)
-DuplicatedContigNames = [i for i in CounterObject if CounterObject[i]>1]
-if len(DuplicatedContigNames) != 0:
-  for ContigName in DuplicatedContigNames:
-    print('Contig name', ContigName, 'was duplicated in the arguments.', \
-    file=sys.stderr)
-  print('All contig names should be unique. Exiting.', file=sys.stderr)
-  exit(1)
-
-# Check the consensus name does not match one fo the contig names.
-if ConsensusName != None and ConsensusName in ContigNames:
-  print('The consensus name should not be the same as one of the contig', \
-  'names. Quitting.', file=sys.stderr)
-  exit(1)
-
-# Read in the sequences from the alignment file (into a dictionary)
-AllSeqsDict, AlignmentLength = ReadSequencesFromFile(AlignmentFile)
-
-# Check the consensus is found
-if ConsensusName != None:
-  if not ConsensusName in AllSeqsDict:
-    print(ConsensusName, 'not found in', AlignmentFile + '. Quitting.', \
-    file=sys.stderr)
-    exit(1)
-  ConsensusSeq = AllSeqsDict[ConsensusName]
-
-# Separate sequences into references and contigs
-RefDict = {}
-ContigDict = {}
-for SeqName in AllSeqsDict:
-  if SeqName in ContigNames:
-    ContigDict[SeqName] = AllSeqsDict[SeqName]
-  else:
-    RefDict[SeqName] = AllSeqsDict[SeqName]
-
-# Check we found all the contigs
-MissingContigs = [contig for contig in ContigNames if not contig in ContigDict]
-if len(MissingContigs) != 0:
-  for ContigName in MissingContigs:
-    print('Contig "'+ContigName+'" was not found in the alignment file.', \
-    file=sys.stderr)
-  print('Exiting.', file=sys.stderr)
-  exit(1)
-
-# A function we'll need more than once:
-def FindSeqStartAndEnd(SeqName, seq, AlignmentLength, FileName):
-  '''Find the 0-based positions of the start and end of the sequence.'''
-  StartOfSeq = 0
-  try:
-    while seq[StartOfSeq] == GapChar:
-      StartOfSeq += 1
-  except IndexError:
-    print(SeqName, "in", FileName, \
-    "has no bases - it's just one big gap. Quitting.", file=sys.stderr)
-    exit(1)
-  EndOfSeq = AlignmentLength-1
-  while seq[EndOfSeq] == GapChar:
-    EndOfSeq -= 1
-  return StartOfSeq,EndOfSeq
-
-# Find the start, end, length and gap fraction of each contig.
-# Find the start of the left-most ('first') contig and the end of the right-most
-# ('last') contig.
-ContigStartsAndEnds = {}
-ContigLengths = {}
-ContigGapFractions = {}
-TotalGapsInContigs = 0
-for ContigName,ContigSeq in ContigDict.items():
-  StartOfContig, EndOfContig = FindSeqStartAndEnd(ContigName, ContigSeq, \
-  AlignmentLength, AlignmentFile)
-  ContigStartsAndEnds[ContigName] = [StartOfContig,EndOfContig]
-  NumGapsInAlignedContig = ContigSeq.count(GapChar)
-  NumInternalGaps = ContigSeq[StartOfContig:EndOfContig+1].count(GapChar)
-  TotalGapsInContigs += NumInternalGaps
-  ContigLengths[ContigName] = AlignmentLength -NumGapsInAlignedContig
-  ContigGapFractions[ContigName] = \
-  float(NumInternalGaps)/(EndOfContig+1 - StartOfContig)
-
-if args.summarise_contigs_1:
-  for ContigName, length in ContigLengths.items():
-    sys.stdout.write(str(length) + ' ' + str(ContigGapFractions[ContigName]))
-  exit(0)
-
-#print(' '.join(map(str, sorted(ContigGapFractions.values(), reverse=True) )))
-#print(float(TotalGapsInContigs)/sum(ContigLengths.values()))
-#exit(0)
-
-AllContigStarts = []
-AllContigEnds = []
-for [ContigStart,ContigEnd] in ContigStartsAndEnds.values():
-  AllContigStarts.append(ContigStart)
-  AllContigEnds.append(ContigEnd)
-StartOfFirstContig = min(AllContigStarts)
-EndOfLastContig = max(AllContigEnds)
-
-#GappiestContigName, GapFraction = \
-#sorted(ContigGapFractions.items(), key=lambda x:x[1], reverse=True)[0]
-
-# Flatten the contigs.
-# Repeat the gap character until the start of the first contig.
-# Then at each position: if all contigs agree on what's there, use that;
-# otherwise, use either [whatever is present in the longest contig there] OR
-# [whatever is present in the longest contig there provided it's not a gap], as
-# desired. Then repeat the gap character until the end.
-FlattenedContigsSeq = GapChar * StartOfFirstContig
-for position in range(StartOfFirstContig,EndOfLastContig+1):
-  DictOfBasesHere = {}
-  for ContigName,ContigSeq in ContigDict.items():
-    DictOfBasesHere[ContigName] = ContigSeq[position]
-  BasesHere = set(DictOfBasesHere.values())
-  if len(BasesHere) == 1:
-    #BaseHere = DictOfBasesHere.values()[0]
-    BaseHere = DictOfBasesHere[list(DictOfBasesHere)[0]]
-  else:
-    LengthOfLongestDesiredContig = 0
-    for ContigName in DictOfBasesHere:
-      StartOfContig, EndOfContig = ContigStartsAndEnds[ContigName]
-      if StartOfContig <= position <= EndOfContig and \
-      ContigLengths[ContigName] > LengthOfLongestDesiredContig:
-        ThisContigsBase = DictOfBasesHere[ContigName]
-        if not args.always_use_sequence or ThisContigsBase != GapChar:
-          BaseHere = ThisContigsBase
-          LengthOfLongestDesiredContig = ContigLengths[ContigName]
-    if LengthOfLongestDesiredContig == 0:
-      print('Malfunction of', sys.argv[0] + ": we failed to figure out what",
-      "base to use from the contigs at ", position+1, 'in', AlignmentFile + \
-      '. Please report to Chris Wymant. Quitting.', file=sys.stderr)
-      exit(1)
-  FlattenedContigsSeq += BaseHere
-FlattenedContigsSeq += GapChar * (AlignmentLength - EndOfLastContig -1)
-
-if args.contigs_length:
-  print(len(FlattenedContigsSeq) - FlattenedContigsSeq.count(GapChar))
-  exit(0)
-
-# Make a list, of the same length of the alignment, of integers: each one
-# counting the number of contigs with coverage there. Gaps inside contigs get
-# counted as coverage; gaps between contigs get a count of 0.
-ContigCoverageByPosition = [0 for n in range(0,AlignmentLength)]
-for [start,end] in ContigStartsAndEnds.values():
-  for position in range(start,end+1):
-    ContigCoverageByPosition[position] += 1
-
-# Compare contigs to consensus to count positions in the four categories
-# ('cats') described in the help above. Convert all bases to upper case, and
-# replace any gap char that neighbours a '?' char in the consensus by a '?'.
-if ConsensusName != None:
-  categories = []
-  ConsensusSeq = ConsensusSeq.upper()
-  ConsensusSeq = PropagateNoCoverageChar(ConsensusSeq)
-  FlattenedContigsSeq = FlattenedContigsSeq.upper()
-  for ContigName in ContigDict:
-    ContigDict[ContigName] = ContigDict[ContigName].upper()
-
-  if CheckContigSNPs:
-    NumPosLongestContigCorrect = 0
-    NumPosLongestContigIncorrect = 0
-    for pos in range(0,AlignmentLength):
-      if ContigCoverageByPosition[pos] < 2:
+# Work out the score for each reference.
+# The score is the sum over positions of the weighted number of contigs that
+# agree with the reference, divided by the total number of contigs. Weighting
+# by the number of contigs with non-gap bases at the position would be better,
+# but then we'd have to find the total number of contigs at each position, so
+# it's a bit more complicated. This method will weight by coverage only if the
+# contigs are uniformly distributed across the reference.
+Scores = collections.defaultdict(float)
+BestRefGivenContigAlignment = collections.defaultdict(PositionCounts)
+for RefName in Seqs:
+  TotalWeight = float(len(Seqs))
+  for Pos in range(len(Seqs[RefName])):
+    RefBase = Seqs[RefName][Pos]
+    if RefBase == '?' or RefBase == 'N':
+      TotalWeight -= 1.0
+      continue
+    TotalWeightHere = TotalWeight
+    if Args.always_use_sequence:
+      TotalWeightHere = float(len(Args.ContigName))
+    Counts = collections.defaultdict(float)
+    for ContigName in Args.ContigName:
+      ContigBase = Seqs[ContigName][Pos]
+      if Args.always_use_sequence and ContigBase != GapChar:
+        TotalWeightHere += 1.0
+      Counts[ContigBase] += 1.0
+    if len(Counts) == 1:
+      # There's no disagreement, so there's no evidence that this position
+      # comes from the reference
+      TotalWeight -= 1.0
+      continue
+    BestContigBases = sorted(Counts.keys(), key=lambda x: Counts[x], \
+    reverse=True)
+    BestContigWeight = Counts[BestContigBases[0]]
+    if Args.always_use_sequence:
+      TotalWeightHere = BestContigWeight
+    for ContigBase in Counts:
+      if Args.always_use_sequence and ContigBase != GapChar:
+        TotalWeightHere += 1.0
+      if ContigBase == GapChar:
         continue
-      ContigBases = []
-      for ContigName, ContigSeq in ContigDict.items():
-        StartOfContig, EndOfContig = ContigStartsAndEnds[ContigName]
-        if StartOfContig <= pos <= EndOfContig:
-          ContigBase = ContigSeq[pos]
-          if ContigBase != '-':
-            ContigBases.append(ContigSeq[pos])
-      if len(set(ContigBases)) >= 2:
-        # There are at least two different bases in the contigs here.
-        #print('pos', pos+1, 'consensus:', ConsensusSeq[pos], 'longest contig:',
-        #FlattenedContigsSeq[pos], 'contig bases here:', ContigBases)
-        if FlattenedContigsSeq[pos] == ConsensusSeq[pos]:
-          NumPosLongestContigCorrect += 1
+      ScoreIncrement = BestContigWeight
+      if Args.always_use_sequence:
+        ScoreIncrement = Counts[ContigBase]
+      Scores[RefName] += ScoreIncrement/TotalWeightHere
+      UpdateBestRefGivenContigAlignment(BestRefGivenContigAlignment, RefBase, \
+      ContigBase, TotalWeightHere)
+
+if Args.print_best_score:
+  BestRef = max(Scores, key=Scores.get)
+  print('The best reference is '+BestRef+\
+  ', which has a score of '+str(Scores[BestRef])+'/'+str(len(Seqs)))
+  sys.exit()
+
+# Sort the references by score, and work out the best reference.
+SortedRefs = sorted(Scores.keys(), key=lambda x: Scores[x], reverse=True)
+BestRef = SortedRefs[0]
+
+# Print the consensus sequence of the contigs and exit, if requested
+if Args.summarise_contigs_1:
+  SummariseContigs(BestRef, Args.ContigName, Seqs)
+  sys.exit()
+
+# Print the consensus sequence of the contigs after applying the best reference
+# and exit, if requested
+if Args.summarise_contigs_2:
+  SummariseContigs(BestRef, Args.ContigName, Seqs, BestRefGivenContigAlignment)
+  sys.exit()
+
+# Print the comparison of the contigs to the consensus and exit, if requested
+if Args.compare_contigs_to_consensus:
+  CompareContigsToConsensus(BestRef, Args.ContigName, Seqs, Args.compare_contigs_to_consensus)
+  sys.exit()
+
+# Print the comparison of the consensus to the reference and exit, if requested
+if Args.compare_contigs_to_consensus_2:
+  CompareConsensusToContigs(BestRef, Args.ContigName, Seqs, Args.compare_contigs_to_consensus_2)
+  sys.exit()
+
+# Apply the best reference to the contigs.
+BestRefGivenContigAlignmentList = []
+for Pos in range(len(Seqs[BestRef])):
+  BestRefGivenContigAlignmentList.append(BestRefGivenContigAlignment[BestRef].Counts[BestRef][Seqs[BestRef][Pos]])
+
+for RefName in Seqs:
+    if RefName == BestRef:
+        continue
+    new_seq = ''
+    for Pos in range(len(Seqs[RefName])):
+        RefBase = Seqs[RefName][Pos]
+        if RefBase == GapChar:
+            new_seq += GapChar
         else:
-          NumPosLongestContigIncorrect += 1
-    print(NumPosLongestContigCorrect, NumPosLongestContigIncorrect)
-    exit(0)
+            new_seq += RefBase
+    Seqs[RefName] = new_seq
 
-
-  if CompareContigsToConsensus:
-    for pos in range(0,AlignmentLength):
-      ConsensusBase = ConsensusSeq[pos]
-      if ConsensusBase == 'N':
-        cat = None
-      elif ContigCoverageByPosition[pos] == 0:
-        if ConsensusBase == '?' or ConsensusBase == GapChar:
-          cat = None
-        else:
-          cat  = 4
-      else:
-
-        # Find all bases (or gaps) inside a contig here.
-        ContigBases = []
-        for ContigName, ContigSeq in ContigDict.items():
-          StartOfContig, EndOfContig = ContigStartsAndEnds[ContigName]
-          if StartOfContig <= pos <= EndOfContig:
-            ContigBases.append(ContigSeq[pos])
-        if ContigBases == []:
-          print('Malfunction of', sys.argv[0] + ": we've lost track of what", \
-          "contigs are present at position", pos+1, 'in', AlignmentFile + \
-          '. Please report to Chris Wymant. Quitting.', file=sys.stderr)
-          exit(1)
-
-        if ConsensusBase == '?':
-          if all(ContigBase == GapChar for ContigBase in ContigBases):
-            cat = None
-          else:
-            cat = 3
-        elif ConsensusBase == GapChar:
-          if all(ContigBase != GapChar for ContigBase in ContigBases):
-            cat = 2
-          else:
-            cat = None
-        else:
-          if any(ContigBase == ConsensusBase for ContigBase in ContigBases):
-            cat = 1
-          else:
-            cat = 2
-
-      categories.append(cat)
-    CatCounts = [0,0,0,0]
-    for cat in categories:
-      if cat != None:
-        CatCounts[cat-1] += 1
-    print(' '.join(map(str, CatCounts)))
-    exit(0)
-
-
-#TotalContigCoverage = sum([1 for base in FlattenedContigsSeq if base != GapChar])
-#sys.stdout.write(str(len(ContigDict)) +' '+ str(TotalContigCoverage) +' ')
-#exit(0)
-
-# Count the number of positions where exactly one contig has a base and no
-# reference has a base - 'unique insertions'. Replace such positions by gaps if
-# desired.
-# Count how many deletions there are inside contigs.
-FlattenedContigsSeq_NoNewInsertions = ''
-LengthOfUniqueInsertions = 0
-LengthOfDeletions = 0
-for position in range(0,AlignmentLength):
-  NumContigsHere = ContigCoverageByPosition[position]
-  ContigBase = FlattenedContigsSeq[position]
-  if NumContigsHere > 0 and ContigBase == GapChar:
-    LengthOfDeletions += 1
-  if NumContigsHere == 1:
-    NoRefHasBaseHere = True
-    for RefName,RefSeq in RefDict.items():
-      if RefSeq[position] != GapChar:
-        NoRefHasBaseHere = False
-        break
-    if NoRefHasBaseHere:
-      LengthOfUniqueInsertions += 1
-    if ExciseUniqueInsertions and NoRefHasBaseHere:
-      FlattenedContigsSeq_NoNewInsertions += GapChar
-    else:
-      FlattenedContigsSeq_NoNewInsertions += ContigBase
-  else:
-    FlattenedContigsSeq_NoNewInsertions += ContigBase
-if ExciseUniqueInsertions:
-  FlattenedContigsSeq = FlattenedContigsSeq_NoNewInsertions
-
-# For each reference, find the fraction of positions with both reference and
-# contig coverage where the two are in agreement. Record the reference start and
-# end.
-ListOfRefsAndScores = []
-for RefName,RefSeq in RefDict.items():
-  NumBasesAgreeing = 0
-  OverlapLength = 0
-  StartOfRef, EndOfRef = FindSeqStartAndEnd(RefName, RefSeq, AlignmentLength,
-  AlignmentFile)
-  for position in range(StartOfRef, EndOfRef+1):
-    if ContigCoverageByPosition[position] > 0:
-      OverlapLength += 1
-      if RefSeq[position] == FlattenedContigsSeq[position]:
-        NumBasesAgreeing += 1
-  if OverlapLength == 0:
-    FractionalAgreement = 0
-  else:
-    FractionalAgreement = float(NumBasesAgreeing)/OverlapLength
-  ListOfRefsAndScores.append([RefName, StartOfRef, EndOfRef, \
-  FractionalAgreement])
-  #NumBasesAgreeing])
-
-# Check at least one reference matches at least one position!
-if all(item[3] < FloatComparisonTolerance for item in ListOfRefsAndScores):
-  print('No reference matches the contigs at any position! We assume this is',\
-  'is an error.\nQuitting.', file=sys.stderr)
-  exit(1)
-
-# Sort the references - the ones closest to the contigs first.
-ListOfRefsAndScores = sorted(ListOfRefsAndScores, key=lambda x:x[3], \
-reverse=True)
-
-BestRefName, BestRefStart, BestRefEnd, BestRefScore = ListOfRefsAndScores[0]
-
-if args.print_best_score:
-  print(BestRefScore, BestRefName)
-  exit(0)
-
-if args.summarise_contigs_2:
-  ContigsWithBestRef = [RefDict[BestRefName]] + ContigDict.values()
-  NumSeqs = len(ContigsWithBestRef)
-  for column in range(AlignmentLength-1,-1,-1):
-    if all(seq[column] == '-' for seq in ContigsWithBestRef):
-      for i in range(NumSeqs):
-        ContigsWithBestRef[i] = ContigsWithBestRef[i][:column] + \
-        ContigsWithBestRef[i][column+1:]
-  ThisAlignmentLength = len(ContigsWithBestRef[0])
-  assert all(len(seq) == ThisAlignmentLength for seq in ContigsWithBestRef)
-  #for i in range(NumSeqs):
-  #  print('>'+str(i+1))
-  #  print(ContigsWithBestRef[i])
-  GapFracsAndLengths = []
-  for contig in ContigsWithBestRef[1:]:
-    start, end = FindSeqStartAndEnd('contig', contig, ThisAlignmentLength,
-    AlignmentFile)
-    NumGaps = contig[start:end+1].count('-')
-    GapFrac = float(NumGaps)/(end - start + 1)
-    Length = end - start + 1 - NumGaps
-    GapFracsAndLengths.append(str(Length) +',' + str(GapFrac))
-  print('\n'.join(GapFracsAndLengths))
-  exit(0)
-
-# Start with the best ref, and iteratively extend it using longer references
-# with lower scores. Break if we reach a reference with zero score, or if our
-# construct becomes as long as the alignment.
-ElongatedRef = RefDict[BestRefName]
-ElongatedRefStart, ElongatedRefEnd = BestRefStart, BestRefEnd
-for RefName, StartOfRef, EndOfRef, NumBasesAgreeing in ListOfRefsAndScores[1:]:
-  if NumBasesAgreeing == 0 or \
-  (ElongatedRefStart == 0 and ElongatedRefEnd == AlignmentLength-1):
-    break
-  ThisRef = RefDict[RefName]
-  if StartOfRef < ElongatedRefStart:
-    ElongatedRef = \
-    ThisRef[:ElongatedRefStart] + ElongatedRef[ElongatedRefStart:]
-    ElongatedRefStart = StartOfRef
-  if EndOfRef > ElongatedRefEnd:
-    ElongatedRef = \
-    ElongatedRef[:ElongatedRefEnd+1] + ThisRef[ElongatedRefEnd+1:]
-    ElongatedRefEnd = EndOfRef
-
-# Fill in gaps in contig coverage using the elongated best reference from above.
-ConstructedRef = ''
-for position in range(0,AlignmentLength):
-  if ContigCoverageByPosition[position] > 0:
-    ConstructedRef += FlattenedContigsSeq[position]
-  else:
-    ConstructedRef += ElongatedRef[position]
-
-# Inserting line breaks: thanks Stackoverflow:
-def insert_newlines(string, every=50):
-  lines = []
-  for i in range(0, len(string), every):
-    lines.append(string[i:i+every])
-  return '\n'.join(lines)
-
-LengthOfFlattenedContigs = len(FlattenedContigsSeq) - FlattenedContigsSeq.count('-')
-LengthOfConstructedRef = len(ConstructedRef) - ConstructedRef.count('-')
-NumBasesOfElongatedRefUsed = LengthOfConstructedRef - LengthOfFlattenedContigs
-print('Info: using', BestRefName, '(elongated with other longer references if',
-'needed) to provide', NumBasesOfElongatedRefUsed, 'bases to fill in gaps',
-'before/between/after contigs. This reference was the best match for the',
-'contigs:', str(100*BestRefScore) + '% of positions in agreement.')
-
-# Print output.
-
-with open(args.OutputFile, 'w') as f:
-  f.write('>ContigsFlattenedWith_'+BestRefName + '\n' + \
-  insert_newlines(ConstructedRef) + '\n>' + BestRefName + '_elongated' + \
-  insert_newlines(ElongatedRef) + '\n')
-
+# Write the sequences to file
+OutFile = open(Args.OutputFile,'w')
+for RefName in Seqs:
+  OutFile.write('>'+RefName+'\n')
+  OutFile.write(Seqs[RefName]+'\n')
+OutFile.close()

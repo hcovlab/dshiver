@@ -2,6 +2,8 @@
 
 set -u
 set -o pipefail
+# Exit upon error
+set -e
 
 ThisDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ToolsDir="$ThisDir"/tools
@@ -46,9 +48,22 @@ function AlignContigsToRefs {
   OldMafftArg=$7
   ContigNames=$(awk '/^>/ {print substr($1,2)}' "$ContigFile")
 
-  "$Aligner" $AlignerOptions --add "$ContigFile" "$ThisRefAlignment" > \
-  "$TempContigAlignment1" || \
-  { echo 'Problem aligning' "$ContigFile"'.' >&2 ; return 1 ; }
+  # Do the inital alignment. Call the $Aligner arg with the desired Python 
+  # executable if it's shiver's aligner, not if it's mafft.
+  if [[ "$Aligner" == "$mafft" ]]; then
+    "$Aligner" $AlignerOptions --add "$ContigFile" "$ThisRefAlignment" > \
+    "$TempContigAlignment1" || \
+    { echo "Problem aligning $ContigFile using $mafft." >&2 ; return 1 ; }
+  elif [[ "$Aligner" == "$Code_AlignToConsensus" ]]; then
+    "$Aligner" $AlignerOptions --add "$ContigFile" \
+    "$ThisRefAlignment" > "$TempContigAlignment1" || \
+    { echo "Problem aligning $ContigFile using $Code_AlignToConsensus." >&2 ; return 1 ; }
+  else
+    echo "Function AlignContigsToRefs called with unexpected value $Aligner"\
+    "for the first 'Aligner' argument." >&2
+    return 1
+  fi
+
   if [[ $MafftTestingStrategy == "MinAlnLength" ]]; then
     PenaltyForAdd=$("$Code_PrintSeqLengths" --first-seq-only --include-gaps \
     "$TempContigAlignment1" | awk '{print $2}') || { echo "Problem running"\
@@ -153,9 +168,7 @@ function PrintAlnLengthIncrease {
 
 }
 
-
 function CheckReadNames {
-
   ReadFile=$1
   # The second argument is 1 for forward reads or 2 for reverse reads.
   OneOrTwo=$2
@@ -164,28 +177,32 @@ function CheckReadNames {
     WrittenOneOrTwo="forward"
   elif [[ "$OneOrTwo" == "2" ]]; then
     WrittenOneOrTwo="reverse"
+  elif [[ "$OneOrTwo" == "0" ]]; then
+    WrittenOneOrTwo="unpaired"
   else
     echo "Error: CheckReadNames function called with a OneOrTwo argument not"\
-    "equal to 1 or 2."
+    "equal to 1, 2, or 0."
     return 1
   fi
 
-  # Check all read seq ids end in /1 or /2 as needed.
-  suffix=$(awk '{if ((NR-1)%4==0) print substr($1,length($1)-1,
-  length($1))}' "$ReadFile" | sort | uniq)
-  if [[ "$suffix" != '/'"$OneOrTwo" ]]; then
-    echo "Error: found at least one read in $ReadFile whose name does"\
-    "not end in '/$OneOrTwo', which is required for $WrittenOneOrTwo reads."\
-    "One particular problem I've seen in reads found online was that the"\
-    "sequence ID lines look like this:" >&2
-    echo "@ReadName descriptor/$OneOrTwo" >&2
-    echo "instead of like this:" >&2
-    echo "@ReadName/$OneOrTwo" >&2
-    echo "In that case you can remove the space, merging the descriptor and"\
-    "the /$OneOrTwo into the name, with a command like this:" >&2
-    echo "awk '"'{if (NR%4 == 1) {print $1 "_" $2} else print}'"' $ReadFile >"\
-    "MyRenamedReads_$OneOrTwo.fastq" >&2
-    return 1
+  if [[ "$WrittenOneOrTwo" != "unpaired" ]]; then
+    # Check all read seq ids end in /1 or /2 as needed.
+    suffix=$(awk '{if ((NR-1)%4==0) print substr($1,length($1)-1,
+    length($1))}' "$ReadFile" | sort | uniq)
+    if [[ "$suffix" != '/'"$OneOrTwo" ]]; then
+      echo "Error: found at least one read in $ReadFile whose name does"\
+      "not end in '/$OneOrTwo', which is required for $WrittenOneOrTwo reads."\
+      "One particular problem I've seen in reads found online was that the"\
+      "sequence ID lines look like this:" >&2
+      echo "@ReadName descriptor/$OneOrTwo" >&2
+      echo "instead of like this:" >&2
+      echo "@ReadName/$OneOrTwo" >&2
+      echo "In that case you can remove the space, merging the descriptor and"\
+      "the /$OneOrTwo into the name, with a command like this:" >&2
+      echo "awk '"'{if (NR%4 == 1) {print $1 "_" $2} else print}'"' $ReadFile >"\
+      "MyRenamedReads_$OneOrTwo.fastq" >&2
+      return 1
+    fi
   fi
 
   # Check none of the lines with read IDs contain tabs
@@ -211,11 +228,9 @@ function CheckReadNames {
 
 }
 
-
 function sam_to_bam {
-
   # Check for the right number of args
-  ExpectedNumArgs=3
+  ExpectedNumArgs=4
   if [[ "$#" -ne "$ExpectedNumArgs" ]]; then
     echo "sam_to_bam function called with $# args; expected $ExpectedNumArgs."\
     "Quitting." >&2
@@ -226,20 +241,27 @@ function sam_to_bam {
   InSam=$1
   LocalRefFAIindex=$2
   OutBam=$3
+  Paired=$4
 
   # Thanks to Nick Croucher for these steps.
   "$samtools" view -bS $samtoolsReadFlags -t "$LocalRefFAIindex" -o \
   "$MapOutConversion1".bam "$InSam" &&
   "$samtools" sort -n "$MapOutConversion1".bam -o "$MapOutConversion2".bam -T \
-  "$SamtoolsSortFile" &&
-  "$samtools" fixmate "$MapOutConversion2".bam "$MapOutConversion3".bam &&
+  "$SamtoolsSortFile" ||
+  { echo 'Failed to convert from sam to bam format.' >&2 ; return 1 ; }
+  if [[ "$Paired" == "true" ]]; then
+    "$samtools" fixmate "$MapOutConversion2".bam "$MapOutConversion3".bam ||
+    { echo 'Failed to convert from sam to bam format.' >&2 ; return 1 ; }
+  else
+    mv "$MapOutConversion2.bam" "$MapOutConversion3.bam"
+  fi
   "$samtools" sort "$MapOutConversion3".bam -o "$OutBam" -T \
   "$SamtoolsSortFile" ||
   { echo 'Failed to convert from sam to bam format.' >&2 ; return 1 ; }
+
 }
 
 function map_with_smalt {
-
   # Check for the right number of args
   ExpectedNumArgs=4
   if [[ "$#" -ne "$ExpectedNumArgs" ]]; then
@@ -274,12 +296,50 @@ function map_with_smalt {
     return 1 ; }
   fi
 
-  sam_to_bam "$MapOutAsSam" "$LocalRefFAIindex" "$OutFileAsBam" ||
+  sam_to_bam "$MapOutAsSam" "$LocalRefFAIindex" "$OutFileAsBam" true ||
+  { echo 'Problem converting from sam to bam format.' >&2 ; return 1 ; }
+}
+
+function map_with_smalt_unpaired {
+
+  # Check for the right number of args
+  ExpectedNumArgs=3
+  if [[ "$#" -ne "$ExpectedNumArgs" ]]; then
+    echo "map_with_smalt function called with $# args; expected"\
+    "$ExpectedNumArgs. Quitting." >&2
+    return 1
+  fi
+
+  # Assign the args
+  ReadsToMap=$1
+  LocalRef=$2
+  OutFileAsBam=$3
+
+  # Index the ref
+  "$smalt" index $smaltIndexOptions "$smaltIndex" "$LocalRef" ||
+  { echo 'Problem indexing the refererence with smalt.' >&2 ;
+  return 1 ; }
+
+  # Do the mapping!
+  echo "Now mapping using smalt with options \"$smaltMapOptions\". Typically a"\
+  "slow step."
+  "$smalt" map $smaltMapOptions -o "$MapOutAsSam" "$smaltIndex" \
+  "$ReadsToMap" || \
+  { echo 'Smalt mapping failed.' >&2 ; return 1 ; }
+
+  # Make the reference's .fai index if needed.
+  LocalRefFAIindex="$LocalRef".fai
+  if [[ ! -f "$LocalRefFAIindex" ]]; then
+    "$samtools" faidx "$LocalRef" && ls "$LocalRef".fai > /dev/null ||
+    { echo 'Problem indexing the refererence with samtools. Quitting.' >&2 ; 
+    return 1 ; }
+  fi
+
+  sam_to_bam "$MapOutAsSam" "$LocalRefFAIindex" "$OutFileAsBam" false ||
   { echo 'Problem converting from sam to bam format.' >&2 ; return 1 ; }
 }
 
 function map_with_bwa_mem {
-
   # Check for the right number of args
   ExpectedNumArgs=4
   if [[ "$#" -ne "$ExpectedNumArgs" ]]; then
@@ -313,12 +373,49 @@ function map_with_bwa_mem {
     return 1 ; }
   fi
 
-  sam_to_bam "$MapOutAsSam" "$LocalRefFAIindex" "$OutFileAsBam" ||
+  sam_to_bam "$MapOutAsSam" "$LocalRefFAIindex" "$OutFileAsBam" true ||
+  { echo 'Problem converting from sam to bam format.' >&2 ; return 1 ; }
+}
+
+function map_with_bwa_mem_unpaired {
+
+  # Check for the right number of args
+  ExpectedNumArgs=3
+  if [[ "$#" -ne "$ExpectedNumArgs" ]]; then
+    echo "map_with_bwa_mem function called with $# args; expected"\
+    "$ExpectedNumArgs. Quitting." >&2
+    return 1
+  fi
+
+  # Assign the args
+  ReadsToMap=$1
+  LocalRef=$2
+  OutFileAsBam=$3
+
+  # Index the ref
+  "$bwa" index "$LocalRef" ||
+  { echo 'Problem indexing the refererence with bwa.' >&2 ;
+  return 1 ; }
+
+  # Do the mapping!
+  echo "Now mapping using bwa mem with options \"$bwaOptions\". Typically a"\
+  "slow step."
+  "$bwa" mem "$LocalRef" "$ReadsToMap" $bwaOptions > \
+  "$MapOutAsSam" || { echo 'bwa mem mapping failed.' >&2 ; return 1 ; }
+
+  # Make the reference's .fai index if needed.
+  LocalRefFAIindex="$LocalRef".fai
+  if [[ ! -f "$LocalRefFAIindex" ]]; then
+    "$samtools" faidx "$LocalRef" && ls "$LocalRef".fai > /dev/null ||
+    { echo 'Problem indexing the refererence with samtools. Quitting.' >&2 ; 
+    return 1 ; }
+  fi
+
+  sam_to_bam "$MapOutAsSam" "$LocalRefFAIindex" "$OutFileAsBam" false ||
   { echo 'Problem converting from sam to bam format.' >&2 ; return 1 ; }
 }
 
 function map_with_bowtie {
-
   # Check for the right number of args
   ExpectedNumArgs=4
   if [[ "$#" -ne "$ExpectedNumArgs" ]]; then
@@ -353,26 +450,68 @@ function map_with_bowtie {
     return 1 ; }
   fi
 
-  sam_to_bam "$MapOutAsSam" "$LocalRefFAIindex" "$OutFileAsBam" ||
+  sam_to_bam "$MapOutAsSam" "$LocalRefFAIindex" "$OutFileAsBam" true ||
   { echo 'Problem converting from sam to bam format.' >&2 ; return 1 ; }
 }
 
-function map {
+function map_with_bowtie_unpaired {
 
   # Check for the right number of args
-  ExpectedNumArgs=5
+  ExpectedNumArgs=3
   if [[ "$#" -ne "$ExpectedNumArgs" ]]; then
-    echo "map function called with $# args; expected $ExpectedNumArgs."\
-    "Quitting." >&2
+    echo "map_with_bowtie function called with $# args; expected"\
+    "$ExpectedNumArgs. Quitting." >&2
     return 1
   fi
 
   # Assign the args
   ReadsToMap1=$1
-  ReadsToMap2=$2
-  LocalRef=$3
-  OutFileStem=$4
-  BamOnlyArg=$5
+  LocalRef=$2
+  OutFileAsBam=$3
+
+  # Index the ref
+  "$bowtie2_build" "$LocalRef" "$bowtieIndex" ||
+  { echo 'Problem indexing the refererence with bowtie2.' >&2 ;
+  return 1 ; }
+
+  # Do the mapping!
+  echo "Now mapping using bowtie2 with options \"$bowtieOptions\". Typically a"\
+  "slow step."
+  "$bowtie2" -x "$bowtieIndex" -U "$ReadsToMap1" -S \
+  "$MapOutAsSam" $bowtieOptions || \
+  { echo 'bowtie2 mapping failed.' >&2 ; return 1 ; }
+
+  # Make the reference's .fai index if needed.
+  LocalRefFAIindex="$LocalRef".fai
+  if [[ ! -f "$LocalRefFAIindex" ]]; then
+    "$samtools" faidx "$LocalRef" && ls "$LocalRef".fai > /dev/null ||
+    { echo 'Problem indexing the refererence with samtools. Quitting.' >&2 ; 
+    return 1 ; }
+  fi
+
+  sam_to_bam "$MapOutAsSam" "$LocalRefFAIindex" "$OutFileAsBam" false ||
+  { echo 'Problem converting from sam to bam format.' >&2 ; return 1 ; }
+}
+
+function map {
+  # Check for the right number of args
+  ExpectedNumArgsPaired=5
+  ExpectedNumArgsUnpaired=4
+  if [[ "$#" -eq 5 ]]; then
+    Paired=true
+    ReadsToMap2=$5
+  elif [[ "$#" -eq 4 ]]; then
+    Paired=false
+  else
+    echo "map function called with $# args; 4 or 5 required. Quitting." >&2
+    return 1
+  fi
+
+  # Assign the args
+  LocalRef=$1
+  OutFileStem=$2
+  BamOnlyArg=$3
+  ReadsToMap1=$4
 
   # Some out files we'll produce
   PreDedupBam="$OutFileStem$PreDeduplicationBamSuffix.bam"
@@ -400,24 +539,44 @@ function map {
     FinalConversionStepOut="$FinalOutBam"
   fi
 
-
-  # Map with the chosen mapper.
-  if [[ "$mapper" == "smalt" ]]; then
-    map_with_smalt "$ReadsToMap1" "$ReadsToMap2" "$LocalRef" \
-    "$FinalConversionStepOut" ||
-    { echo 'Problem mapping with smalt.' >&2 ; return 1 ; }
-  elif [[ "$mapper" == "bowtie" ]]; then
-    map_with_bowtie "$ReadsToMap1" "$ReadsToMap2" "$LocalRef" \
-    "$FinalConversionStepOut" ||
-    { echo 'Problem mapping with bowtie.' >&2 ; return 1 ; }
-  elif [[ "$mapper" == "bwa" ]]; then
-    map_with_bwa_mem "$ReadsToMap1" "$ReadsToMap2" "$LocalRef" \
-    "$FinalConversionStepOut" ||
-    { echo 'Problem mapping with bwa mem.' >&2 ; return 1 ; }
+  if [[ "$Paired" == "true" ]]; then
+    # Map with the chosen mapper.
+    if [[ "$mapper" == "smalt" ]]; then
+      map_with_smalt "$ReadsToMap1" "$ReadsToMap2" "$LocalRef" \
+      "$FinalConversionStepOut" ||
+      { echo 'Problem mapping with smalt.' >&2 ; return 1 ; }
+    elif [[ "$mapper" == "bowtie" ]]; then
+      map_with_bowtie "$ReadsToMap1" "$ReadsToMap2" "$LocalRef" \
+      "$FinalConversionStepOut" ||
+      { echo 'Problem mapping with bowtie.' >&2 ; return 1 ; }
+    elif [[ "$mapper" == "bwa" ]]; then
+      map_with_bwa_mem "$ReadsToMap1" "$ReadsToMap2" "$LocalRef" \
+      "$FinalConversionStepOut" ||
+      { echo 'Problem mapping with bwa mem.' >&2 ; return 1 ; }
+    else
+      echo "Unrecognised value $mapper for the 'mapper' config file variable;"\
+      "possible values are 'smalt', 'bowtie' or 'bwa'." >&2
+      return 1
+    fi
   else
-    echo "Unrecognised value $mapper for the 'mapper' config file variable;"\
-    "possible values are 'smalt', 'bowtie' or 'bwa'." >&2
-    return 1
+    # Map with the chosen mapper.
+    if [[ "$mapper" == "smalt" ]]; then
+      map_with_smalt_unpaired "$ReadsToMap1" "$LocalRef" \
+      "$FinalConversionStepOut" ||
+      { echo 'Problem mapping with smalt.' >&2 ; return 1 ; }
+    elif [[ "$mapper" == "bowtie" ]]; then
+      map_with_bowtie_unpaired "$ReadsToMap1" "$LocalRef" \
+      "$FinalConversionStepOut" ||
+      { echo 'Problem mapping with bowtie.' >&2 ; return 1 ; }
+    elif [[ "$mapper" == "bwa" ]]; then
+      map_with_bwa_mem_unpaired "$ReadsToMap1" "$LocalRef" \
+      "$FinalConversionStepOut" ||
+      { echo 'Problem mapping with bwa mem.' >&2 ; return 1 ; }
+    else
+      echo "Unrecognised value $mapper for the 'mapper' config file variable;"\
+      "possible values are 'smalt', 'bowtie' or 'bwa'." >&2
+      return 1
+    fi
   fi
 
   # Deduplicate if desired
@@ -437,7 +596,7 @@ function map {
     return 0
   fi
 
-  ProcessBam "$FinalOutBam" "$LocalRef" "$OutFileStem"
+  ProcessBam "$FinalOutBam" "$LocalRef" "$OutFileStem" "$Paired"
   return "$?"
 
 }
@@ -445,7 +604,7 @@ function map {
 function ProcessBam {
 
   # Check for the right number of args
-  ExpectedNumArgs=3
+  ExpectedNumArgs=4
   if [[ "$#" -ne "$ExpectedNumArgs" ]]; then
     echo "ProcessBam function called with $# args; expected $ExpectedNumArgs."\
     "Quitting." >&2
@@ -456,6 +615,7 @@ function ProcessBam {
   bam=$1
   LocalRef=$2
   OutFileStem=$3
+  Paired=$4
 
   # Some out files we'll produce
   InsertSizeCounts="$OutFileStem$InsertSizeCountsSuffix"
@@ -483,22 +643,24 @@ function ProcessBam {
   # Check at least one read was mapped
   NumMappedReads=$("$samtools" view "$bam" | wc -l)
   if [[ $NumMappedReads -eq 0 ]]; then
-    echo "$bam is empty - no reads were mapped!"
+    echo "$bam is empty - no reads were mapped!" >&2
     return 3
   fi
 
-  # Calculate the normalised insert size distribution.
-  "$samtools" view "$bam" | awk '{if ($9 > 0) print $9}' > "$InsertSizes1"
-  InsertCount=$(wc -l "$InsertSizes1" | awk '{print $1}')
-  if [[ $InsertCount -gt 0 ]]; then
-    echo "Insert size,Count,Unit-normalised count" > "$InsertSizeCounts"
-    sort -n "$InsertSizes1" | uniq -c > "$InsertSizes2"
-    awk '{print $2 "," $1 "," $1/'$InsertCount'}' "$InsertSizes2" >> \
-    "$InsertSizeCounts"
-  else
-    echo "Warning: no read in $bam was identified as having"\
-    "positive insert size. Unexpected. We'll skip making an insert size"\
-    "distribution and continue."
+  # Calculate the normalised insert size distribution, for paired reads
+  if [[ "$Paired" == "true" ]]; then 
+    "$samtools" view "$bam" | awk '{if ($9 > 0) print $9}' > "$InsertSizes1"
+    InsertCount=$(wc -l "$InsertSizes1" | awk '{print $1}')
+    if [[ $InsertCount -gt 0 ]]; then
+      echo "Insert size,Count,Unit-normalised count" > "$InsertSizeCounts"
+      sort -n "$InsertSizes1" | uniq -c > "$InsertSizes2"
+      awk '{print $2 "," $1 "," $1/'$InsertCount'}' "$InsertSizes2" >> \
+      "$InsertSizeCounts"
+    else
+      echo "Warning: no read in $bam was identified as having"\
+      "positive insert size. Unexpected. We'll skip making an insert size"\
+      "distribution and continue."
+    fi
   fi
 
   # Generate pileup
@@ -666,13 +828,18 @@ function GetHIVcontigs {
     return 3
   fi
 
+  # Iterate over the different blast tasks to try.
   # Blast the contigs. Keep only hits for which (length * fractional identity)
   # is longer than the minimum contig length.
-  "$BlastNcommand" -query "$LongContigs" -db "$BlastDatabase" -max_target_seqs \
-  1 -outfmt '10 qseqid sseqid evalue pident qlen qstart qend sstart send' \
-  -word_size "$BlastWordSize" | awk -F, \
-  '($4/100 * ($7-$6+1))>='"$MinContigLength" > "$BlastFile" || 
-  { echo "Problem blasting $LongContigs." >&2 ; return 1 ; }
+  echo -n '' > "$BlastFile"
+  for task in $BlastTasks; do 
+    "$BlastNcommand" -query "$LongContigs" -db "$BlastDatabase" -task "$task" \
+    $ContigBlastArgs -outfmt \
+    '10 qseqid sseqid evalue pident qlen qstart qend sstart send' \
+    | awk -F, '($4/100 * ($7-$6+1))>='"$MinContigLength" >> "$BlastFile" || 
+    { echo "Problem running $BlastNcommand on $LongContigs using -task $task." \
+    >&2 ; return 1 ; }
+  done
 
   # If there are no blast hits, nothing needs doing. Exit.
   NumBlastHits=$(wc -l "$BlastFile" | awk '{print $1}')
@@ -695,7 +862,7 @@ function GetHIVcontigs {
 function CheckConfig {
 
   # Check for the right number of args and assign them.
-  ExpectedNumArgs=4
+  ExpectedNumArgs=5
   if [[ "$#" -ne "$ExpectedNumArgs" ]]; then
     echo "CheckConfig function called with $# args; expected"\
     "$ExpectedNumArgs. Quitting." >&2
@@ -705,6 +872,7 @@ function CheckConfig {
   CheckForInit=$2
   CheckForAligningContigs=$3
   CheckForMapping=$4
+  CheckForPaired=$5
   source "$ConfigFile"
 
   # Coerce boolean args into true bools if needed
@@ -722,6 +890,11 @@ function CheckConfig {
     CheckForMapping=true
   else
     CheckForMapping=false
+  fi
+  if [[ "$CheckForPaired" == "true" ]]; then
+    CheckForPaired=true
+  else
+    CheckForPaired=false
   fi
 
   # Check 0 < MaxContigGappiness < 1, and 0 < MinContigHitFrac < 1
@@ -842,6 +1015,22 @@ function CheckConfig {
   # Some checks only needed if we're mapping:
   if $CheckForMapping; then
 
+    # Check for unpaired data if trimming primers
+    if [[ "$TrimReadsForPrimers" == "true" ]] && ! $CheckForPaired; then
+      echo "TrimReadsForPrimers was set to true in the config file; this"\
+      "feature is not yet implemented for unpaired read data." \
+      "If desired please run read trimming separately before shiver." >&2
+      return 1
+    fi
+
+    # Check for unpaired data if trimming adapters
+    if [[ "$TrimReadsForAdaptersAndQual" == "true" ]] && ! $CheckForPaired; then
+      echo "TrimReadsForAdaptersAndQual was set to true in the config file;"\
+      "this feature is not yet implemented for unpaired read data." \
+      "If desired please run read trimming separately before shiver." >&2
+      return 1
+    fi
+
     # Check fastaq works, if needed
     if [[ "$TrimReadsForPrimers" == "true" ]]; then
       "$fastaq" version &> /dev/null || { echo "Error running" \
@@ -858,17 +1047,45 @@ function CheckConfig {
       "'trimmomatic'?" >&2; return 1; }
     fi
 
-    # Test the mapper is one we support and can run.
+    # Test the mapper is one we support and can run, testing for paired-read
+    # only options used for unpaired data...
+    
+    # ...first, smalt...
     if [[ "$mapper" == "smalt" ]]; then
       "$smalt" version &> /dev/null || { echo "Error running" \
       "'$smalt version'. Are you sure that smalt is installed, and that you"\
       "chose the right value for the config file variable 'mapper'?" >&2; \
       return 1; }
+      # Check for paired smalt options if using unpaired data
+      if ! $CheckForPaired; then
+        smaltMapOptionsPairedOnly='-x -i -j'
+        for option in $(echo $smaltMapOptionsPairedOnly); do
+          if [[ "$smaltMapOptions" =~ "$option " ]]; then
+            echo "Option $option was specified in smaltMapOptions in the"\
+            "config file; this is only for paired read data." >&2; 
+            return 1
+          fi 
+        done
+      fi
+      
+    # ...second, bowtie...
     elif [[ "$mapper" == "bowtie" ]]; then
       "$bowtie2" --help &> /dev/null || { echo "Error running" \
       "$bowtie2 --help. Are you sure that bowtie2 is installed, and"\
       "that you chose the right value for the config file variable" \
       "'mapper'?" >&2; return 1; }
+      if ! $CheckForPaired; then
+        bowtieOptionsPairedOnly='--maxins --no-discordant'
+        for option in $(echo $bowtieOptionsPairedOnly); do
+          if [[ "$bowtieOptions" =~ "$option " ]]; then
+            echo "Option $option was specified in bowtieOptions in the config"\
+            "file; this is only for paired read data." >&2; 
+            return 1
+          fi 
+        done
+      fi
+      
+    # ...third bwa
     elif [[ "$mapper" == "bwa" ]]; then
       # bwa doesn't seem to have any kind of 'help' or 'version' command that we
       # can call to test it works.
@@ -877,6 +1094,29 @@ function CheckConfig {
       echo "Unrecognised value $mapper for the 'mapper' config file variable;"\
       "possible values are 'smalt', 'bowtie' or 'bwa'." >&2
       return 1
+    fi
+
+    # Check samtoolsReadFlags for -f values incompatible with unpaired data
+    if ! $CheckForPaired; then
+      if [[ $samtoolsReadFlags =~ "-f" ]]; then
+        FilterInteger=$(grep -Eo '\-f\s+([0-9]+)' <<< "$samtoolsReadFlags" | awk '{print $2}')
+        # Determine if -f option is odd
+        if [[ $(( $FilterInteger % 2 )) -eq 1 ]]; then
+          echo "samtools option -f $FilterInteger was specified in samtoolsReadFlags"\
+          "in the config file. Specifying an odd number here means that all"\
+          "reads that are not paired will be excluded from the bam file; this"\
+          "is incompatible with providing unpaired read data." >&2;
+          return 1
+        fi
+        # Determine if -f option has remainder 2 when divided by 4
+        if [[ $(( $FilterInteger % 4 )) -eq 2 ]]; then
+          echo "samtools option -f $FilterInteger was specified in samtoolsReadFlags"\
+          "in the config file. Specifying an number here that has remainder 2"\
+          "after division by 4 means that reads not mapped in a pair will be"\
+          "excluded; this is incompatible with providing unpaired read data." >&2;
+          return 1
+        fi
+      fi
     fi
   fi
 
@@ -946,4 +1186,3 @@ function CheckNonEmptyReads {
   fi
 
 }
-

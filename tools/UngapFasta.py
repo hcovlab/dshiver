@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-from __future__ import print_function
 
 ## Author: Chris Wymant, chris.wymant@bdi.ox.ac.uk
 ## Acknowledgement: I wrote this while funded by ERC Advanced Grant PBDR-339251
@@ -34,10 +33,10 @@ help='''Return only the first sequence from the fasta file.''')
 args = parser.parse_args()
 
 UngappedSeqs = []
-for seq in SeqIO.parse(open(args.FastaFile),'fasta'):
-  seq.seq = seq.seq.ungap("-")
+for seq in SeqIO.parse(open(args.FastaFile, 'r'),'fasta'):
+  seq.seq = seq.seq.replace("-","")
   if args.q_mark:
-    seq.seq = seq.seq.ungap("?")
+    seq.seq = seq.seq.replace("?","")
   if args.trim_missing_ends:
     SeqAsStr = str(seq.seq)
     SeqAsStr = sub("^[Nn?]+", "", SeqAsStr)
@@ -52,4 +51,3 @@ if UngappedSeqs == []:
   exit(1)
 
 SeqIO.write(UngappedSeqs, sys.stdout, "fasta")
-

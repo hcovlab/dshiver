@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-from __future__ import print_function
+from Bio import AlignIO
+from ShiverFuncs import RemoveBlankColumns
 
 ## Author: Chris Wymant, chris.wymant@bdi.ox.ac.uk
 ## Acknowledgement: I wrote this while funded by ERC Advanced Grant PBDR-339251
@@ -12,14 +13,12 @@ printed to stdout.'''
 import argparse
 import os
 import sys
-from Bio import AlignIO
-from ShiverFuncs import RemoveBlankColumns
 
 # Define a function to check files exist, as a type for the argparse.
 def File(MyFile):
-  if not os.path.isfile(MyFile):
-    raise argparse.ArgumentTypeError(MyFile+' does not exist or is not a file.')
-  return MyFile
+    if not os.path.isfile(MyFile):
+        raise argparse.ArgumentTypeError(MyFile+' does not exist or is not a file.')
+    return MyFile
 
 # Set up the arguments for this script
 parser = argparse.ArgumentParser(description=ExplanatoryMessage)
@@ -34,10 +33,11 @@ args = parser.parse_args()
 # Are we checking just for "-", or also for "?"
 BlankChars = '-'
 if args.q_mark:
-  BlankChars += '?'
+    BlankChars += '?'
 
 alignment = AlignIO.read(args.FastaFile, "fasta")
 
 alignment = RemoveBlankColumns(alignment, BlankChars, args.uninformative)
 
-AlignIO.write(alignment, sys.stdout, 'fasta')
+AlignIO.write([alignment], sys.stdout, 'fasta')
+

@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-from __future__ import print_function
 
 ## Author: Chris Wymant, chris.wymant@bdi.ox.ac.uk
-## Acknowledgement: I wrote this while funded by ERC Advanced Grant PBDR-339251
+## Acknowledgement: I wrote this while funded by ERC Advanced Grant PBDR-339251 
 ##
 ## Overview: TODO
 ExplanatoryMessage = '''This script finds specified sub-sequences inside a
@@ -29,7 +28,8 @@ GapChars = '-?'
 # Import what's needed
 import sys
 import argparse
-import os.path, collections
+import os.path
+from collections import Counter
 from AuxiliaryFunctions import ReadSequencesFromFile, IUPACdict, BaseMatch
 
 # Define a function to check files exist, as a type for the argparse.
@@ -43,7 +43,7 @@ parser.add_argument('alignment', type=File)
 parser.add_argument('NameOfChosenSeq', help='''The name of the sequence
 containing the chosen sub-sequence.''')
 parser.add_argument("-S", "--start", action='append', help='''Use this to
-specify a sub-sequence whose start coordinate you want. (You can
+specify a sub-sequence whose start coordinate you want. (You can 
 use this option multiple times to specify multiple sub-sequences e.g. -S AAAC -S
 AAAT ...)''')
 parser.add_argument("-E", "--end", action='append', help='''Use this to
@@ -65,16 +65,16 @@ ChosenRef = args.NameOfChosenSeq
 # convenience.
 StartPrimers = args.start
 EndPrimers = args.end
-if StartPrimers == None:
+if StartPrimers is None:
   StartPrimers = []
-if EndPrimers == None:
+if EndPrimers is None:
   EndPrimers = []
 
 # Check that at least one primer was specified
 if len(StartPrimers) == 0 and len(EndPrimers) == 0:
   print('At least one SubSeq is required, specified using the -S or -E',\
   'options.\nQuitting.', file=sys.stderr)
-  exit(1)
+  sys.exit(1)
 
 # Convert the primers to upper case, check they don't contain gaps (that would
 # be weird) and check they are unique (though they may appear in both lists).
@@ -85,15 +85,15 @@ for PrimerList in [StartPrimers,EndPrimers]:
       if GapChar in PrimerList[i]:
         print('SubSeq', PrimerList[i], 'contains a gap. This is unexpected.'+\
         '\nQuitting.', file=sys.stderr)
-        exit(1)
-  CounterObject = collections.Counter(PrimerList)
+        sys.exit(1)
+  CounterObject = Counter(PrimerList)
   DuplicatedPrimers = [i for i in CounterObject if CounterObject[i]>1]
   if len(DuplicatedPrimers) != 0:
     for DuplicatedPrimer in DuplicatedPrimers:
       print('SubSeq', DuplicatedPrimer, 'was specified twice with the same',\
       'option.', file=sys.stderr)
     print('Quitting.', file=sys.stderr)
-    exit(1)
+    sys.exit(1)
 
 # Read in the sequences from the alignment file (into a dictionary)
 SeqDict, AlignmentLength = ReadSequencesFromFile(AlignmentFile)
@@ -102,15 +102,15 @@ SeqDict, AlignmentLength = ReadSequencesFromFile(AlignmentFile)
 if not ChosenRef in SeqDict:
   print('Could not find', ChosenRef, 'in', AlignmentFile+'.\nQuitting.',
   file=sys.stderr)
-  exit(1)
+  sys.exit(1)
 ChosenRefSeq = SeqDict[ChosenRef]
 
-# Define the set of unique primers, i.e. StartPrimers+EndPrimers but not
+# Define the set of unique primers, i.e. StartPrimers+EndPrimers but not 
 # double counting those that appear in both. Record their lengths in a dict.
 AllUniquePrimers = StartPrimers + \
 [primer for primer in EndPrimers if not primer in StartPrimers]
 NumUniquePrimers = len(AllUniquePrimers)
-PrimerLengths = {primer : len(primer) for primer in AllUniquePrimers}
+PrimerLengths = {primer : len(primer) for primer in AllUniquePrimers} 
 
 # Finds the position in the alignment, for each primer, after
 # which we should stop checking for primer-reference matches because the number
@@ -136,7 +136,7 @@ if not AllPrimersShorterThanRef:
   PrimerLastChancesForMatch]
   print('The following SubSeqs are longer than', ChosenRef+':', \
   ' '.join(OverlyLongPrimers) +'\nQuitting.', file=sys.stderr)
-  exit(1)
+  sys.exit(1)
 
 # Find the primers in the chosen reference sequence, converted to upper case.
 StartPrimerPositions = {}
@@ -167,21 +167,21 @@ for PositionMin1,base in enumerate(ChosenRefSeq):
           if primer in StartPrimerPositions or primer in EndPrimerPositions:
             print('Encountered SubSeq', primer, 'a second time in',ChosenRef+ \
             '. SubSeqs should be unique.\nQuitting.', file=sys.stderr)
-            exit(1)
+            sys.exit(1)
           if primer in StartPrimers:
             StartPrimerPositions[primer] = PositionMin1 +1
           if primer in EndPrimers:
             EndPrimerPositions[primer] = PositionMin1 +StepsForward+1
           break
       StepsForward += 1
-
+        
 # Check that all primers were found
 MissingPrimers = [primer for primer in AllUniquePrimers if \
 (not primer in StartPrimerPositions) and (not primer in EndPrimerPositions)]
 if len(MissingPrimers) != 0:
   print('Unable to find', ' or '.join(MissingPrimers), 'in', ChosenRef+\
   '.\nQuitting.', file=sys.stderr)
-  exit(1)
+  sys.exit(1)
 
 # Merge the start and end positions into a single sorted list, each value being
 # coupled to its primer name with 'start_of_' or 'end_of_' prepended.
@@ -192,7 +192,7 @@ SortedList = sorted(SortedList, key=lambda item: item[1])
 
 if args.AlignmentCoords:
   print(' '.join(str(value) for key,value in SortedList))
-  exit(0)
+  sys.exit(0)
 
 # Now convert those primer positions, which were with respect to the alignment,
 # into positions with respect to each reference.
@@ -225,5 +225,3 @@ for SeqName, seq in SeqDict.items():
 print('# name ', '  '.join([str(item[0]) for item in SortedList]))
 for SeqName in sorted(PositionsDict.keys()):
   print(SeqName, ' '.join(map(str,PositionsDict[SeqName])))
-
-
