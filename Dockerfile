@@ -97,6 +97,6 @@ RUN chmod +x /shiver/pipeline.sh && \
     mkdir /data_tmp
 
 WORKDIR /data_tmp
-ENTRYPOINT ["/shiver/pipeline.sh"]
-CMD ["help"]
+#ENTRYPOINT ["/shiver/pipeline.sh"]
+#CMD ["help"]
 
