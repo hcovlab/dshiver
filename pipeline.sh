@@ -13,8 +13,8 @@ else
 fi
 
 # copy shiver config:
- if [ -z ${ShiverConfig+x} ]
- then
+if [ -z ${ShiverConfig+x} ]
+then
     printf "Shiver config file is not found, using the default one\n"
     SIVERCONFIGPATH="/shiver/config.sh"
 else
@@ -23,6 +23,21 @@ else
 fi
 
 LOGFILE="/data/$Prefix.log"
+
+# check if pipeline mode is Paired or Unpaired
+if [ -z ${ReverseReads+x} ]
+then 
+    printf "ReverseReads argument not found in pipeline.conf, mode set to Unpaired" | tee -a $LOGFILE
+    Paired=false
+    if [ -z ${ForwardReads+x} ]
+    then
+        printf "ForwardReads argument not found in pipeline.conf. Exit run" | tee -a $LOGFILE
+        exit 2
+    fi
+else
+    printf "ReverseReads argument found in pipeline.conf, mode set to Paired" | tee -a $LOGFILE
+    Paired=true
+fi
 
 function usage {
     echo "SHIVER pipeline"
@@ -58,31 +73,54 @@ function usage {
 }
 
 function de_novo_assembly {
+    # check input files
     if [ -z ${ForwardReads+x} ]; then printf "ERROR: missing ForwardReads\n" | tee -a $LOGFILE; exit 2; fi
-    if [ -z ${ReverseReads+x} ]; then printf "ERROR: missing ReverseReads\n" | tee -a $LOGFILE; exit 2; fi
+    if [ $Paired = true ]; then 
+        if [ -z ${ReverseReads+x} ]; then printf "ERROR: missing ReverseReads\n" | tee -a $LOGFILE; exit 2; fi
+    fi
     if [ -f /data/$ForwardReads ]; then printf ""; else printf "error: file not found $ForwardReads\n" | tee -a $LOGFILE; exit 3; fi
-    if [ -f /data/$ReverseReads ]; then printf ""; else printf "error: file not found $ReverseReads\n" | tee -a $LOGFILE; exit 3; fi
-    printf "\n========== start iva ==========\n" 2>&1 | tee -a $LOGFILE
-    cd /data_tmp
-    # reads_1.fastq
-    if [[ /data/$ForwardReads == *.gz ]]
-    then
-        cp /data/$ForwardReads /data_tmp/reads_1.fastq.gz 2>&1 | tee -a $LOGFILE
-    else
-        cp /data/$ForwardReads /data_tmp/reads_1.fastq 2>&1 | tee -a $LOGFILE
-        gzip /data_tmp/reads_1.fastq 2>&1 | tee -a $LOGFILE
+    if [ $Paired = true ]; then 
+        if [ -f /data/$ReverseReads ]; then printf ""; else printf "error: file not found $ReverseReads\n" | tee -a $LOGFILE; exit 3; fi
     fi
-    # reads_2.fastq
-    if [[ /data/$ReverseReads == *.gz ]]
-    then
-        cp /data/$ReverseReads /data_tmp/reads_2.fastq.gz 2>&1 | tee -a $LOGFILE
+    # run de novo assembly algorithm
+    if [ $Paired = true ]; then 
+        printf "\n========== start spades ==========\n" 2>&1 | tee -a $LOGFILE
+        cd /data_tmp
+        # reads_1.fastq
+        if [[ /data/$ForwardReads == *.gz ]]
+        then
+            cp /data/$ForwardReads /data_tmp/reads_1.fastq.gz 2>&1 | tee -a $LOGFILE
+        else
+            cp /data/$ForwardReads /data_tmp/reads_1.fastq 2>&1 | tee -a $LOGFILE
+            gzip /data_tmp/reads_1.fastq 2>&1 | tee -a $LOGFILE
+        fi
+        # reads_2.fastq
+        if [[ /data/$ReverseReads == *.gz ]]
+        then
+            cp /data/$ReverseReads /data_tmp/reads_2.fastq.gz 2>&1 | tee -a $LOGFILE
+        else
+            cp /data/$ReverseReads /data_tmp/reads_2.fastq 2>&1 | tee -a $LOGFILE
+            gzip /data_tmp/reads_2.fastq 2>&1 | tee -a $LOGFILE
+        fi
+        python3 /usr/bin/spades.py --isolate -1 reads_1.fastq.gz -2 reads_2.fastq.gz -o /data_tmp/SPADESout | tee -a $LOGFILE
+        #iva -vv --seed_stop_length 400 -f reads_1.fastq.gz -r reads_2.fastq.gz /data_tmp/IVAout 2>&1 | tee -a $LOGFILE
+        cp /data_tmp/SPADESout/contigs.fasta /data/${Prefix}_DeNovoContigs.fasta 2>&1 | tee -a $LOGFILE
+        printf "\n========== spades finished ==========\n" 2>&1 | tee -a $LOGFILE
     else
-        cp /data/$ReverseReads /data_tmp/reads_2.fastq 2>&1 | tee -a $LOGFILE
-        gzip /data_tmp/reads_2.fastq 2>&1 | tee -a $LOGFILE
+        printf "\n========== start spades ==========\n" 2>&1 | tee -a $LOGFILE
+        cd /data_tmp
+        # reads_1.fastq
+        if [[ /data/$ForwardReads == *.gz ]]
+        then
+            cp /data/$ForwardReads /data_tmp/reads_1.fastq.gz 2>&1 | tee -a $LOGFILE
+        else
+            cp /data/$ForwardReads /data_tmp/reads_1.fastq 2>&1 | tee -a $LOGFILE
+            gzip /data_tmp/reads_1.fastq 2>&1 | tee -a $LOGFILE
+        fi
+        python3 /usr/bin/spades.py --isolate -s reads_1.fastq.gz -o /data_tmp/SPADESout | tee -a $LOGFILE
+        cp /data_tmp/SPADESout/contigs.fasta /data/${Prefix}_DeNovoContigs.fasta 2>&1 | tee -a $LOGFILE
+        printf "\n========== spades finished ==========\n" 2>&1 | tee -a $LOGFILE
     fi
-    iva -vv --seed_stop_length 400 -f reads_1.fastq.gz -r reads_2.fastq.gz /data_tmp/IVAout 2>&1 | tee -a $LOGFILE
-    cp /data_tmp/IVAout/contigs.fasta /data/${Prefix}_DeNovoContigs.fasta 2>&1 | tee -a $LOGFILE
-    printf "\n========== iva finished ==========\n" 2>&1 | tee -a $LOGFILE
 }
 
 function shiver_init {
@@ -141,17 +179,20 @@ function shiver_map_reads {
     awk '{if (NR%4 == 1) {print $1 "/1"} else print}' /data_tmp/reads_1.fastq > /data_tmp/reads_1.fastq_tmp 2>&1 | tee -a $LOGFILE
     rm /data_tmp/reads_1.fastq 2>&1 | tee -a $LOGFILE
     mv /data_tmp/reads_1.fastq_tmp /data_tmp/tmp/reads_1_tmp.fastq 2>&1 | tee -a $LOGFILE
-    # reads_2.fastq
-    if [[ /data/$ReverseReads == *.gz ]]
-    then
-        cp /data/$ReverseReads /data_tmp/reads_2.fastq.gz 2>&1 | tee -a $LOGFILE
-        gunzip reads_2.fastq.gz 2>&1 | tee -a $LOGFILE
-    else
-        cp /data/$ReverseReads /data_tmp/reads_2.fastq 2>&1 | tee -a $LOGFILE
+    if [ $Paired = true ]; then
+        # reads_2.fastq
+        if [[ /data/$ReverseReads == *.gz ]]
+        then
+            cp /data/$ReverseReads /data_tmp/reads_2.fastq.gz 2>&1 | tee -a $LOGFILE
+            gunzip reads_2.fastq.gz 2>&1 | tee -a $LOGFILE
+        else
+            cp /data/$ReverseReads /data_tmp/reads_2.fastq 2>&1 | tee -a $LOGFILE
+        fi
+        awk '{if (NR%4 == 1) {print $1 "/2"} else print}' /data_tmp/reads_2.fastq > /data_tmp/reads_2.fastq_tmp 2>&1 | tee -a $LOGFILE
+        rm /data_tmp/reads_2.fastq 2>&1 | tee -a $LOGFILE
+        mv /data_tmp/reads_2.fastq_tmp /data_tmp/tmp/reads_2_tmp.fastq 2>&1 | tee -a $LOGFILE
     fi
-    awk '{if (NR%4 == 1) {print $1 "/2"} else print}' /data_tmp/reads_2.fastq > /data_tmp/reads_2.fastq_tmp 2>&1 | tee -a $LOGFILE
-    rm /data_tmp/reads_2.fastq 2>&1 | tee -a $LOGFILE
-    mv /data_tmp/reads_2.fastq_tmp /data_tmp/tmp/reads_2_tmp.fastq 2>&1 | tee -a $LOGFILE
+
     # Contigs.fasta
     if [ -f /data/${Prefix}_DeNovoContigs.fasta ]; then printf ""; else printf "error: file not found ${Prefix}_DeNovoContigs.fasta\n" 2>&1 | tee -a $LOGFILE; exit 3; fi
     cp /data/${Prefix}_DeNovoContigs.fasta /data_tmp/${Prefix}_DeNovoContigs.fasta 2>&1 | tee -a $LOGFILE
@@ -162,14 +203,18 @@ function shiver_map_reads {
     if [ -f /data/${Prefix}_cut_wRefs.fasta ]; then printf ""; else printf "error: file not found ${Prefix}_cut_wRefs.fasta\n" 2>&1 | tee -a $LOGFILE; exit 3; fi
     cp /data/${Prefix}_cut_wRefs.fasta /data_tmp/${Prefix}_cut_wRefs.fasta 2>&1 | tee -a $LOGFILE
 
-    bash /shiver/shiver_map_reads.sh /data_tmp/ShiverInitDir /data_tmp/config.sh /data_tmp/${Prefix}_DeNovoContigs.fasta $Prefix /data_tmp/${Prefix}.blast /data_tmp/${Prefix}_cut_wRefs.fasta /data_tmp/tmp/reads_1_tmp.fastq /data_tmp/tmp/reads_2_tmp.fastq 2>&1 | tee -a $LOGFILE
+    if [ $Paired = true ]; then
+        bash /shiver/shiver_map_reads.sh /data_tmp/ShiverInitDir /data_tmp/config.sh /data_tmp/${Prefix}_DeNovoContigs.fasta $Prefix /data_tmp/${Prefix}.blast /data_tmp/${Prefix}_cut_wRefs.fasta /data_tmp/tmp/reads_1_tmp.fastq /data_tmp/tmp/reads_2_tmp.fastq 2>&1 | tee -a $LOGFILE
+    else
+        bash /shiver/shiver_map_reads.sh /data_tmp/ShiverInitDir /data_tmp/config.sh /data_tmp/${Prefix}_DeNovoContigs.fasta $Prefix /data_tmp/${Prefix}.blast /data_tmp/${Prefix}_cut_wRefs.fasta /data_tmp/tmp/reads_1_tmp.fastq 2>&1 | tee -a $LOGFILE
+    fi
     printf "\n========== stop shiver_map_reads.sh ==========\n" 2>&1 | tee -a $LOGFILE
     cp /data_tmp/${Prefix}* /data/. 2>&1 | tee -a $LOGFILE
 }
 
 function run_drug_resistance {
     printf "\n========== start drug_res.py ==========\n" 2>&1 | tee -a $LOGFILE
-    /usr/bin/python3 /shiver/drug_res.py "/data/${Prefix}_ref.fasta" "/data/${Prefix}_drug_resistance.xlsx" 2>&1 | tee -a $LOGFILE
+    /usr/bin/python3 /shiver/drug_res.py "/data_tmp/${Prefix}_result_remap_consensus.fasta" "/data/${Prefix}_drug_resistance.xlsx" 2>&1 | tee -a $LOGFILE
     printf "\n========== stop drug_res.py ==========\n" 2>&1 | tee -a $LOGFILE
 
 }
@@ -285,7 +330,7 @@ align_contigs)
     exit 0
     ;;
 map_reads)
-    init_log "map reada"
+    init_log "map reads"
     shiver_init
     shiver_map_reads
     printf "========== DONE ================================================================\n" >> $LOGFILE

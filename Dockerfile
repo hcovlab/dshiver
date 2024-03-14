@@ -89,6 +89,15 @@ RUN cd ~ && \
     ldconfig && \
     cd ~ && rm -rf mummer
 
+RUN cd ~ && \
+    apt-get update && \
+    apt-get install -y g++ cmake zlib1g-dev libbz2-dev && \
+    wget https://github.com/ablab/spades/releases/download/v3.15.5/SPAdes-3.15.5.tar.gz && \
+    tar -xzf SPAdes-3.15.5.tar.gz && \
+    cd SPAdes-3.15.5 && \
+    PREFIX=/usr ./spades_compile.sh && \
+    cd ~
+
 RUN pip3 install iva
 
 COPY . /shiver
@@ -97,6 +106,6 @@ RUN chmod +x /shiver/pipeline.sh && \
     mkdir /data_tmp
 
 WORKDIR /data_tmp
-#ENTRYPOINT ["/shiver/pipeline.sh"]
-#CMD ["help"]
+ENTRYPOINT ["/shiver/pipeline.sh"]
+CMD ["help"]
 

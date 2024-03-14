@@ -161,7 +161,7 @@ if ConsensusName != None and ConsensusName in ContigNames:
   exit(1)
 
 # Read in the sequences from the alignment file (into a dictionary)
-AllSeqsDict, AlignmentLength = ReadSequencesFromFile(AlignmentFile)
+AllSeqsDict, AlignmentLength = AuxiliaryFunctions.ReadSequencesFromFile(AlignmentFile)
 
 # Check the consensus is found
 if ConsensusName != None:
@@ -256,7 +256,7 @@ for position in range(StartOfFirstContig,EndOfLastContig+1):
     DictOfBasesHere[ContigName] = ContigSeq[position]
   BasesHere = set(DictOfBasesHere.values())
   if len(BasesHere) == 1:
-    BaseHere = DictOfBasesHere.values()[0]
+    BaseHere = list(DictOfBasesHere.values())[0]
   else:
     LengthOfLongestDesiredContig = 0
     for ContigName in DictOfBasesHere:
@@ -293,7 +293,7 @@ for [start,end] in ContigStartsAndEnds.values():
 if ConsensusName != None:
   categories = []
   ConsensusSeq = ConsensusSeq.upper()
-  ConsensusSeq = PropagateNoCoverageChar(ConsensusSeq)
+  ConsensusSeq = AuxiliaryFunctions.PropagateNoCoverageChar(ConsensusSeq)
   FlattenedContigsSeq = FlattenedContigsSeq.upper()
   for ContigName in ContigDict:
     ContigDict[ContigName] = ContigDict[ContigName].upper()
