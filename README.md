@@ -61,7 +61,7 @@ directory, copy the following files:
 1.  adapters you used for the Illumina sequencing in a fasta file
     (default name: Adapters.fasta)
 
-2.  you used for the amplification of the target prior to Illumina
+2.  primers you used for the amplification of the target prior to Illumina
     sequencing, in a fasta file (default name: Primers.fasta)
 
 3.  reference alignment containing aligned whole genome sequences
@@ -80,7 +80,7 @@ directory, copy the following files:
 > reference alignment containing the appropriate ‘whole segment’
 > sequences.
 
-4.  paired-end short reads in two files (forward and reverse reads),
+4.  paired-end short reads in two files (forward and reverse reads) or single-end short reads in one file (only set the ForwardReads argument),
     e.g., the output of an Illumina MiSeq run (default file names:
     either fastq files: reads_1.fastq, reads_2.fastq or gzipped fastq
     files: reads_1.fastq.gz, reads_2.fastq.gz)
@@ -183,7 +183,7 @@ docker -rm dockerID
 Docker containers use a layered filesystem where each “docker image”
 represents a read-only layer; the modifications - the running container
 makes - are always written on the top image. This filesystem only
-existswhile the container is running, afterward, every file dies with
+exists while the container is running, afterward, every file dies with
 it. So, to mount a new folder (volume) that saves the output files of
 your container, you should use the`-v` switch. This switch then needs
 the full pathway of your directory where you have your input files on
@@ -266,7 +266,7 @@ docker run -it -v `pwd`:/data ghcr.io/hcovlab/dshiver de_novo_assembly
 ```
 
 The contigs that you received from the *de novo* assembly software. The
-default tool of this image is IVA (Iterative Virus Assembler).
+default tool of this image is SPAdes (from v1.6.1_1.0 instead of IVA (Iterative Virus Assembler)).
 
 ### 3. Alignment of contigs
 
