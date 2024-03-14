@@ -42,7 +42,7 @@ In our study, we performed computational resource usage analyses with a
 range of contamination and coverage scenarios on a computer with
 Intel(R) Core(TM) i7-7700 CPU @3.60GHz processor, 16 GB of system
 memory, and a Ubuntu 22.04.2 LTS operating system. For RAM and CPU usage
-requirement estimations compared to other pipelines, see our paper.
+requirement estimations compared to other pipelines, see [our paper](https://www.biorxiv.org/content/10.1101/2024.03.13.584779v1).
 
 > [!NOTE]
 >
@@ -61,7 +61,7 @@ directory, copy the following files:
 1.  adapters you used for the Illumina sequencing in a fasta file
     (default name: Adapters.fasta)
 
-2.  primers you used for the amplification of the target prior to Illumina
+2.  you used for the amplification of the target prior to Illumina
     sequencing, in a fasta file (default name: Primers.fasta)
 
 3.  reference alignment containing aligned whole genome sequences
@@ -80,7 +80,7 @@ directory, copy the following files:
 > reference alignment containing the appropriate ‘whole segment’
 > sequences.
 
-4.  paired-end short read files (for paired-end sequencing forward and reverse reads separately, for single-end datasets in 1 file),
+4.  paired-end short reads in two files (forward and reverse reads),
     e.g., the output of an Illumina MiSeq run (default file names:
     either fastq files: reads_1.fastq, reads_2.fastq or gzipped fastq
     files: reads_1.fastq.gz, reads_2.fastq.gz)
@@ -183,7 +183,7 @@ docker -rm dockerID
 Docker containers use a layered filesystem where each “docker image”
 represents a read-only layer; the modifications - the running container
 makes - are always written on the top image. This filesystem only
-exists while the container is running, afterward, every file dies with
+existswhile the container is running, afterward, every file dies with
 it. So, to mount a new folder (volume) that saves the output files of
 your container, you should use the`-v` switch. This switch then needs
 the full pathway of your directory where you have your input files on
@@ -266,7 +266,7 @@ docker run -it -v `pwd`:/data ghcr.io/hcovlab/dshiver de_novo_assembly
 ```
 
 The contigs that you received from the *de novo* assembly software. The
-default tool of this image is SPAdes (instead of IVA from version 1.6.0_1.0).
+default tool of this image is IVA (Iterative Virus Assembler).
 
 ### 3. Alignment of contigs
 
@@ -363,3 +363,5 @@ SID_remap_consensus_MinCov_X_Y.fasta file.
 # References
 
 Wymant, Chris, et al. "Easy and accurate reconstruction of whole HIV genomes from short-read sequence data with shiver." *Virus evolution* 4.1 (2018): vey007.
+
+Zsichla, Levente et al. "Comparative Evaluation of Bioinformatic Pipelines for Full-Length Viral Genome Assembly." *preprint, bioRxiv* (2024)
