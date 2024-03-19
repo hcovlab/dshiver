@@ -214,9 +214,10 @@ function shiver_map_reads {
 
 function run_drug_resistance {
     printf "\n========== start drug_res.py ==========\n" 2>&1 | tee -a $LOGFILE
-    /usr/bin/python3 /shiver/drug_res.py "/data_tmp/${Prefix}_result_remap_consensus.fasta" "/data/${Prefix}_drug_resistance.xlsx" 2>&1 | tee -a $LOGFILE
+    python3 /shiver/tools/SplitFasta.py ${Prefix}_remap_consensus_MinCov_15_30.fasta /data_tmp
+    cat /data_tmp/${Prefix}_remap_consensus.fasta | sed "s/\?//g" | awk "NF" > /data_tmp/${Prefix}_shiver_cons.fasta
+    /usr/bin/python3 /shiver/drug_res.py "/data_tmp/${Prefix}_shiver_cons.fasta" "/data/${Prefix}_drug_resistance.xlsx" 2>&1 | tee -a $LOGFILE
     printf "\n========== stop drug_res.py ==========\n" 2>&1 | tee -a $LOGFILE
-
 }
 
 function init_log {

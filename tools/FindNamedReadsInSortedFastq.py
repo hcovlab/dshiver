@@ -14,17 +14,15 @@
 # Import some modules we'll need.
 import os.path
 import sys
-from optparse import OptionParser
 from argparse import ArgumentParser
 
 # Define the arguments and options
-parser = ArgumentParser()
+parser = ArgumentParser(description="Find named reads in a sorted FASTQ file.")
 parser.add_argument("-v", "--invert", action="store_true", dest="invert",
-default=False,
-help="find all reads EXCEPT those named.")
-parser.add_argument("-s", "--not-sorted", action="store_true", help='''Use this to
-specify that the read file and/or list of desired reads may not be sorted. We
-therefore search for the reads in a slightly slower manner.''')
+                    default=False,
+                    help="find all reads EXCEPT those named.")
+parser.add_argument("-s", "--not-sorted", action="store_true", 
+                    help='''Use this to specify that the read file and/or list of desired reads may not be sorted. We therefore search for the reads in a slightly slower manner.''')
 options = parser.parse_args()
 invert = options.invert
 
