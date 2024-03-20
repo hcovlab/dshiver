@@ -9,6 +9,28 @@ import re
 import os
 import fnmatch
 
+# Check if output file path is provided
+if len(sys.argv) < 3:
+    print("Usage: python script.py input.fasta output.xlsx")
+    sys.exit(1)
+
+input_file = sys.argv[1]
+print(f"Input file: '{input_file}'")
+output_file = sys.argv[2]
+print(f"Output file '{output_file}'")
+
+# Check if output file directory exists and is writable
+output_dir = os.path.dirname(output_file)
+if not os.path.exists(output_dir) or not os.access(output_dir, os.W_OK):
+    print(f"Error: Output directory '{output_dir}' is not writable.")
+    sys.exit(1)
+
+# Check if input file exists
+if not os.path.exists(input_file):
+    print(f"Error: Input file '{input_file}' not found.")
+    sys.exit(1)
+
+
 
 #lang = sys.argv[3]
 lang = 'en'
@@ -376,12 +398,11 @@ else:
 
             else:
                 try:
-                    writexlsx(firstCol, secondCol, database, subtype, errors, sys.argv[1])
-                    name = sys.argv[1].split('.')
-                    name = name[0] + "_HIVDB_query.json"
-                    f = open(name, "a")
-                    f.write(json. dumps(alldata))
-                    f.close()
+                    # Write results to the output Excel file
+                    writexlsx(firstCol, secondCol, database, subtype, errors, output_file)
+                    print("XLSX report successfully written.")
                 except PermissionError:
-                    print("Couldn't write XLSX file due to permission error.")
+                    print("Error: Permission denied. Couldn't write XLSX file.")
+                except Exception as e:
+                    print(f"An error occurred: {str(e)}")
             break

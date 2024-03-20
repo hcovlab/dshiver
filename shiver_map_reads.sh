@@ -583,12 +583,12 @@ else
       fi
 
       # Extract the non-contaminant read pairs
-      "$Code_FindReadsInFastq" -v -s "$reads1" "$BadReadsBaseName"_1.txt > \
+      "$Code_FindReadsInFastq" "$reads1" "$BadReadsBaseName"_1.txt -s -v > \
       "$cleaned1reads" || \
       { echo 'Problem extracting the non-contaminant reads using' \
       "$Code_FindReadsInFastq"'. Quitting.' >&2 ; exit 1 ; }
       if $Paired; then
-        "$Code_FindReadsInFastq" -v -s "$reads2" "$BadReadsBaseName"_2.txt > \
+        "$Code_FindReadsInFastq" "$reads2" "$BadReadsBaseName"_2.txt -s -v > \
         "$cleaned2reads" || \
         { echo 'Problem extracting the non-contaminant reads using' \
         "$Code_FindReadsInFastq"'. Quitting.' >&2 ; exit 1 ; }
