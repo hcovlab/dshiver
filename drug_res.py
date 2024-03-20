@@ -309,7 +309,7 @@ def writexlsx(firstCol, secondCol,database, subtype,errors, file):
     if lang == 'en':
         worksheet.merge_range('A1:B1', 'Query date: '+ x.strftime("%c"), bold)
         worksheet.merge_range('A2:B2', 'Database version: '+ database, bold)
-        worksheet.merge_range('A3:B3', 'Sequence name: '+ file.split('_')[0], bold)
+        worksheet.merge_range('A3:B3', 'Sequence name: '+ input_file.split('/')[-1], bold)
         worksheet.merge_range('A4:B4', 'HIV-1 subtype: '+ subtype, bold)
         worksheet.merge_range('A5:B5', errors, bold)
        
@@ -318,7 +318,7 @@ def writexlsx(firstCol, secondCol,database, subtype,errors, file):
     else:
         worksheet.merge_range('A1:B1', 'Dátum: '+ x.strftime("%c"), bold)
         worksheet.merge_range('A2:B2', 'Adatbázis verzió: '+ database, bold)
-        worksheet.merge_range('A3:B3', 'Szekvencia : '+ file.split('_')[0], bold)
+        worksheet.merge_range('A3:B3', 'Szekvencia : '+ input_file.split('/')[-1], bold)
         worksheet.merge_range('A4:B4', 'HIV-1 altípus: '+ subtype, bold)
         worksheet.merge_range('A5:B5', errors, bold)
        
