@@ -50,7 +50,7 @@ def FastaFileToSeqDict(FastaFile):
       '; sequence names ought to be unique. Quitting.', file=sys.stderr)
       exit(1)
     if args.ignore_gaps:
-      seq.seq = seq.seq.ungap('-')
+      seq.seq = seq.seq.replace('-','')
     SeqAsString = str(seq.seq)
     if not args.case_sensitive:
       SeqAsString = SeqAsString.upper()

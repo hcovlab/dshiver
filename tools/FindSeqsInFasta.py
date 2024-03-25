@@ -172,13 +172,13 @@ for seq in SeqsWeWant:
       exit(1)
     seq.seq = seq.seq[LeftCoord-1:RightCoord]
   if args.gap_strip:
-    seq.seq = seq.seq.ungap("-").ungap("?")
+    seq.seq = seq.seq.replace("-","").replace("?","")
 
 # Skip too-short sequences if desired
 if args.min_length:
   NewSeqsWeWant = []
   for seq in SeqsWeWant:
-    if len(seq.seq.ungap("-").ungap("?")) >= args.min_length:
+    if len(seq.seq.replace("-","").replace("?","")) >= args.min_length:
       NewSeqsWeWant.append(seq)
   SeqsWeWant = NewSeqsWeWant
 

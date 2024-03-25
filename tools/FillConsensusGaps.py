@@ -79,7 +79,7 @@ for ConsensusBase, RefBase in zip(ConsensusAsString, RefAsString):
     exit(1)
 
 # Ungap, and rename if desired.
-consensus.seq = Seq.Seq(NewConsensus).ungap('-')
+consensus.seq = Seq.Seq(NewConsensus).replace('-','')
 if args.output_seq_name != None:
   consensus.id = args.output_seq_name
 consensus.description = ''

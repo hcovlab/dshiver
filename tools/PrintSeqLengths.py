@@ -104,12 +104,12 @@ for file_ in args.FastaFile:
       continue
 
     if not args.include_gaps:
-      seq.seq = seq.seq.ungap("-")
+      seq.seq = seq.seq.replace("-","")
       if not args.fragments:
-        seq.seq = seq.seq.ungap("?")
+        seq.seq = seq.seq.replace("?","")
     if args.ignore_n:
-        seq.seq = seq.seq.ungap("n")
-        seq.seq = seq.seq.ungap("N")
+        seq.seq = seq.seq.replace("n","")
+        seq.seq = seq.seq.replace("N","")
     if args.ignore_lower_case:
       seq.seq = ''.join(x for x in seq.seq if not x.islower())
     if args.fragments:

@@ -68,7 +68,7 @@ for seq in SeqIO.parse(open(args.FastaFile),'fasta'):
 
   # Gap strip if desired.
   if args.gap_strip:
-    seq.seq = seq.seq.ungap("-")
+    seq.seq = seq.seq.replace("-","")
 
   SeqDict[FilenameSafeID] = seq
 

@@ -35,9 +35,9 @@ args = parser.parse_args()
 
 UngappedSeqs = []
 for seq in SeqIO.parse(open(args.FastaFile),'fasta'):
-  seq.seq = seq.seq.ungap("-")
+  seq.seq = seq.seq.replace("-","")
   if args.q_mark:
-    seq.seq = seq.seq.ungap("?")
+    seq.seq = seq.seq.replace("?","")
   if args.trim_missing_ends:
     SeqAsStr = str(seq.seq)
     SeqAsStr = sub("^[Nn?]+", "", SeqAsStr)
