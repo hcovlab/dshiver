@@ -507,11 +507,11 @@ else
     { echo 'Problem creating a blast database. Quitting.' >&2 ; exit 1 ; }
 
     # Convert fastq to fasta.
-    "$Code_ConvertFastqToFasta" "$reads1" "$reads1asFasta" || \
+    "$python" "$Code_ConvertFastqToFasta" "$reads1" "$reads1asFasta" || \
       { echo 'Problem converting the reads from fastq to fasta. Quitting.' >&2 ; \
       exit 1 ; }
     if $Paired; then
-      "$Code_ConvertFastqToFasta" "$reads2" "$reads2asFasta" || \
+      "$python" "$Code_ConvertFastqToFasta" "$reads2" "$reads2asFasta" || \
       { echo 'Problem converting the reads from fastq to fasta. Quitting.' >&2 ; \
       exit 1 ; }
     fi

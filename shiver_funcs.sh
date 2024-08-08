@@ -29,7 +29,7 @@ Code_KeepBestLinesInDataFile="$ToolsDir/KeepBestLinesInDataFile.py"
 Code_ConvertFastqToFasta="$ToolsDir/ConvertFastqToFasta.py"
 
 # Only needed if GiveHXB2coords is set to true in the config file
-HXB2file=$(dirname "$ThisDir")'/data/external/B.FR.83.HXB2_LAI_IIIB_BRU.K03455.fasta'
+HXB2file='/shiver/data/external/B.FR.83.HXB2_LAI_IIIB_BRU.K03455.fasta'
 
 function CheckHXB2fileExists {
   if [[ ! -f "$HXB2file" ]]; then
