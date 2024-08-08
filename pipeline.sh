@@ -232,7 +232,12 @@ function init_log {
     printf "================================================================================\n" >> $LOGFILE
     printf "\n\n\n" >> $LOGFILE
     printf "=========== Pipeline config: pipeline.conf =====================================\n" >> $LOGFILE
-    cat /shiver/pipeline.conf >> $LOGFILE
+    if [ -f /data/pipeline.conf ]
+    then
+        cat /data/pipeline.conf >> $LOGFILE
+    else
+        cat /shiver/pipeline.conf >> $LOGFILE
+    fi
     printf "\n" >> $LOGFILE
     printf "================================================================================\n" >> $LOGFILE
     printf "\n\n\n" >> $LOGFILE
