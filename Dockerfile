@@ -8,7 +8,7 @@ RUN apt-get update && \
 
 RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3 && \
     pip3 install --upgrade pip && \
-    pip3 install pyfastaq biopython xlsxwriter requests
+    pip3 install pyfastaq biopython xlsxwriter requests six
 
 RUN cd ~ && \
     wget https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/2.14.1/ncbi-blast-2.14.1+-x64-linux.tar.gz && \
